@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 
-const WIDGET_API_KEY = "YOUR_API_KEY_HERE"; // Replace with your API-SPORTS key
+const WIDGET_API_KEY = "1c9e1f18dac735375293eeadbe80e81c";
 
 interface WidgetProps {
   attrs: Record<string, string>;
