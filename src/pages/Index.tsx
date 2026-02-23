@@ -1,7 +1,6 @@
 import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
-import LiveMatches from "@/components/LiveMatches";
-import UpcomingMatches from "@/components/UpcomingMatches";
+import FootballWidgets from "@/components/FootballWidgets";
 import Footer from "@/components/Footer";
 
 const Index = () => {
@@ -10,8 +9,7 @@ const Index = () => {
       <Header />
       <main className="flex-1">
         <HeroSection />
-        <LiveMatches />
-        <UpcomingMatches />
+        <FootballWidgets />
       </main>
       <Footer />
     </div>
