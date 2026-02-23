@@ -1,7 +1,5 @@
 import { useEffect, useRef } from "react";
 
-const WIDGET_API_KEY = "1c9e1f18dac735375293eeadbe80e81c";
-
 interface WidgetProps {
   attrs: Record<string, string>;
   className?: string;
@@ -19,32 +17,14 @@ const Widget = ({ attrs, className }: WidgetProps) => {
       });
       ref.current.appendChild(el);
     }
-  }, [attrs]);
+  }, []);
 
   return <div ref={ref} className={className} />;
 };
 
 const FootballWidgets = () => {
-  const configRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (configRef.current && !configRef.current.querySelector('[data-type="config"]')) {
-      const config = document.createElement("api-sports-widget");
-      config.setAttribute("data-type", "config");
-      config.setAttribute("data-key", WIDGET_API_KEY);
-      config.setAttribute("data-sport", "football");
-      config.setAttribute("data-lang", "en");
-      config.setAttribute("data-theme", "VenomDark");
-      config.setAttribute("data-show-logos", "true");
-      config.setAttribute("data-show-errors", "true");
-      config.setAttribute("data-timezone", "Europe/Istanbul");
-      configRef.current.appendChild(config);
-    }
-  }, []);
-
   return (
     <div className="space-y-12 py-8">
-      <div ref={configRef} className="hidden" />
 
       {/* Live Games */}
       <section className="container mx-auto px-4">
@@ -106,7 +86,7 @@ const FootballWidgets = () => {
           <Widget attrs={{
             "data-type": "standings",
             "data-league": "39",
-            "data-season": "2024",
+            "data-season": "2025",
             "data-target-team": "modal",
           }} />
         </div>
@@ -121,7 +101,7 @@ const FootballWidgets = () => {
           <Widget attrs={{
             "data-type": "standings",
             "data-league": "140",
-            "data-season": "2024",
+            "data-season": "2025",
             "data-target-team": "modal",
           }} />
         </div>
