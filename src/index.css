@@ -162,3 +162,39 @@
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--primary));
 }
+
+/* API-SPORTS Custom Theme */
+api-sports-widget[data-theme="VenomDark"] {
+  --primary-color: #a855f7;
+  --success-color: #22c55e;
+  --warning-color: #eab308;
+  --danger-color: #ef4444;
+  --light-color: #9ca3af;
+
+  --home-color: #a855f7;
+  --away-color: #f59e0b;
+
+  --text-color: #faf5e4;
+  --text-color-info: #9ca3af;
+
+  --background-color: #1a1025;
+
+  --primary-font-size: 0.72rem;
+  --secondary-font-size: 0.75rem;
+  --button-font-size: 0.8rem;
+  --title-font-size: 0.9rem;
+
+  --header-text-transform: uppercase;
+  --button-text-transform: uppercase;
+  --title-text-transform: uppercase;
+
+  --border: 1px solid rgba(168, 85, 247, 0.2);
+  --game-height: 2.3rem;
+  --league-height: 2.35rem;
+
+  --score-size: 2.25rem;
+  --flag-size: 22px;
+  --teams-logo-size: 18px;
+  --teams-logo-size-xl: 5rem;
+  --hover: rgba(168, 85, 247, 0.15);
+}
