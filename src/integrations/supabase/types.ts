@@ -230,6 +230,15 @@ export type Database = {
         }
         Returns: boolean
       }
+      place_bet: {
+        Args: {
+          p_potential_win: number
+          p_selections: Json
+          p_stake: number
+          p_total_odds: number
+        }
+        Returns: string
+      }
     }
     Enums: {
       app_role: "admin" | "user"

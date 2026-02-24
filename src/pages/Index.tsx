@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import Header from "@/components/Header";
 import HeroSection from "@/components/HeroSection";
 import BettingOdds, { BetSelection } from "@/components/BettingOdds";
@@ -7,13 +9,30 @@ import BetSlip from "@/components/BetSlip";
 import Footer from "@/components/Footer";
 import LeagueSidebar from "@/components/LeagueSidebar";
 import BottomNav from "@/components/BottomNav";
+import AnnouncementBanner from "@/components/AnnouncementBanner";
 
 const Index = () => {
   const [bets, setBets] = useState<BetSelection[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedLeague, setSelectedLeague] = useState<string>("all");
 
+  // Fetch site settings for maintenance & announcement
+  const { data: siteSettings } = useQuery({
+    queryKey: ["site-settings"],
+    queryFn: async () => {
+      const { data } = await supabase.from("site_settings").select("*");
+      const map: Record<string, string> = {};
+      data?.forEach((s: any) => { map[s.key] = s.value; });
+      return map;
+    },
+    staleTime: 60000,
+  });
+
+  const maintenanceMode = siteSettings?.maintenance_mode === "true";
+  const announcement = siteSettings?.announcement || "";
+
   const handleAddBet = (bet: BetSelection) => {
+    if (maintenanceMode) return;
     setBets((prev) => {
       const exists = prev.find((b) => b.id === bet.id);
       if (exists) {
@@ -31,10 +50,10 @@ const Index = () => {
 
   return (
     <div className="min-h-screen flex flex-col">
+      <AnnouncementBanner announcement={announcement} maintenanceMode={maintenanceMode} />
       <Header onToggleSidebar={() => setSidebarOpen(!sidebarOpen)} />
 
       <div className="flex flex-1">
-        {/* League Sidebar */}
         <LeagueSidebar
           isOpen={sidebarOpen}
           onClose={() => setSidebarOpen(false)}
@@ -45,7 +64,6 @@ const Index = () => {
           }}
         />
 
-        {/* Main Content */}
         <main className="flex-1 min-w-0 pb-20 lg:pb-0">
           <HeroSection />
           <BettingOdds onAddBet={handleAddBet} selectedBets={bets} />
@@ -54,7 +72,9 @@ const Index = () => {
         </main>
       </div>
 
-      <BetSlip bets={bets} onRemoveBet={handleRemoveBet} onClearAll={handleClearAll} />
+      {!maintenanceMode && (
+        <BetSlip bets={bets} onRemoveBet={handleRemoveBet} onClearAll={handleClearAll} />
+      )}
       <BottomNav />
     </div>
   );

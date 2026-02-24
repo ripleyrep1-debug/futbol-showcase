@@ -50,27 +50,43 @@ const Dashboard = () => {
     },
   });
 
+  // Two-step fetch for recent bets (no FK join)
   const { data: recentBets } = useQuery({
     queryKey: ["admin-recent-bets"],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data: bets } = await supabase
         .from("bets")
-        .select("*, profiles(display_name)")
+        .select("*")
         .order("created_at", { ascending: false })
         .limit(10);
-      return data ?? [];
+      if (!bets || bets.length === 0) return [];
+      const userIds = [...new Set(bets.map((b) => b.user_id))];
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, display_name")
+        .in("id", userIds);
+      const nameMap = new Map((profiles ?? []).map((p) => [p.id, p.display_name]));
+      return bets.map((b) => ({ ...b, display_name: nameMap.get(b.user_id) ?? "—" }));
     },
   });
 
+  // Two-step fetch for recent payments (no FK join)
   const { data: recentPayments } = useQuery({
     queryKey: ["admin-recent-payments"],
     queryFn: async () => {
-      const { data } = await supabase
+      const { data: payments } = await supabase
         .from("payment_requests")
-        .select("*, profiles(display_name)")
+        .select("*")
         .order("created_at", { ascending: false })
         .limit(10);
-      return data ?? [];
+      if (!payments || payments.length === 0) return [];
+      const userIds = [...new Set(payments.map((p) => p.user_id))];
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("id, display_name")
+        .in("id", userIds);
+      const nameMap = new Map((profiles ?? []).map((p) => [p.id, p.display_name]));
+      return payments.map((p) => ({ ...p, display_name: nameMap.get(p.user_id) ?? "—" }));
     },
   });
 
@@ -142,7 +158,7 @@ const Dashboard = () => {
               <TableBody>
                 {recentBets?.map((bet: any) => (
                   <TableRow key={bet.id}>
-                    <TableCell className="font-medium">{bet.profiles?.display_name ?? "—"}</TableCell>
+                    <TableCell className="font-medium">{bet.display_name}</TableCell>
                     <TableCell>₺{Number(bet.stake).toLocaleString("tr-TR")}</TableCell>
                     <TableCell>{Number(bet.total_odds).toFixed(2)}</TableCell>
                     <TableCell>₺{Number(bet.potential_win).toLocaleString("tr-TR")}</TableCell>
@@ -184,7 +200,7 @@ const Dashboard = () => {
               <TableBody>
                 {recentPayments?.map((p: any) => (
                   <TableRow key={p.id}>
-                    <TableCell className="font-medium">{p.profiles?.display_name ?? "—"}</TableCell>
+                    <TableCell className="font-medium">{p.display_name}</TableCell>
                     <TableCell>{p.type === "deposit" ? "Yatırım" : "Çekim"}</TableCell>
                     <TableCell>₺{Number(p.amount).toLocaleString("tr-TR")}</TableCell>
                     <TableCell>
