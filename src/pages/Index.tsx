@@ -10,6 +10,7 @@ import Footer from "@/components/Footer";
 import LeagueSidebar from "@/components/LeagueSidebar";
 import BottomNav from "@/components/BottomNav";
 import AnnouncementBanner from "@/components/AnnouncementBanner";
+import GamesSection from "@/components/GamesSection";
 import DepositModal from "@/components/DepositModal";
 import AuthModal from "@/components/AuthModal";
 
@@ -76,6 +77,7 @@ const Index = () => {
         <main className="flex-1 min-w-0 pb-20 lg:pb-0">
           <HeroSection />
           <BettingOdds onAddBet={handleAddBet} selectedBets={bets} selectedLeague={selectedLeague} />
+          <GamesSection />
           <FootballWidgets />
           <Footer />
         </main>
