@@ -507,14 +507,17 @@ const BettingOdds = ({ onAddBet, selectedBets, selectedLeague }: BettingOddsProp
           m.league.toLowerCase().includes(q)
       );
     } else {
-      // Apply category filter only when not searching
-      if (activeFilter === "live") filtered = filtered.filter((m) => m.isLive);
-      else if (activeFilter === "upcoming") filtered = filtered.filter((m) => !m.isLive);
-      else if (activeFilter === "popular") {
-        filtered = filtered.filter((m) => m.allBets.length > 0);
-        filtered.sort((a, b) => b.allBets.length - a.allBets.length);
+      // Apply category filter only when not searching and no specific sidebar filter active
+      const hasSpecificFilter = selectedLeague && selectedLeague !== "all" && selectedLeague !== "popular";
+      if (!hasSpecificFilter) {
+        if (activeFilter === "live") filtered = filtered.filter((m) => m.isLive);
+        else if (activeFilter === "upcoming") filtered = filtered.filter((m) => !m.isLive);
+        else if (activeFilter === "popular") {
+          filtered = filtered.filter((m) => m.allBets.length > 0);
+          filtered.sort((a, b) => b.allBets.length - a.allBets.length);
+        }
+        else if (activeFilter === "all") { /* show all */ }
       }
-      else if (activeFilter === "all") { /* show all */ }
     }
 
     // Sort: live first, then by date+time
