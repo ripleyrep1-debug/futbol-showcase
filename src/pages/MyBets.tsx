@@ -4,7 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/Header";
 import BottomNav from "@/components/BottomNav";
 import { Badge } from "@/components/ui/badge";
-import { Receipt, Loader2 } from "lucide-react";
+import { Receipt, Loader2, CheckCircle, XCircle, Clock } from "lucide-react";
 import { Navigate } from "react-router-dom";
 
 const statusMap: Record<string, { label: string; variant: "default" | "destructive" | "secondary" | "outline" }> = {
@@ -58,20 +58,37 @@ const MyBets = () => {
               {bets.map((bet) => {
                 const selections = Array.isArray(bet.selections) ? bet.selections : [];
                 const st = statusMap[bet.status] ?? { label: bet.status, variant: "secondary" as const };
+                const settledCount = selections.filter((s: any) => s.result === "won" || s.result === "lost").length;
+                const totalCount = selections.length;
                 return (
                   <div key={bet.id} className="rounded-xl border border-border bg-card p-4 space-y-3">
                     <div className="flex items-center justify-between">
-                      <Badge variant={st.variant}>{st.label}</Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant={st.variant}>{st.label}</Badge>
+                        {totalCount > 0 && (
+                          <span className="text-xs text-muted-foreground">
+                            {settledCount}/{totalCount} seçim sonuçlandı
+                          </span>
+                        )}
+                      </div>
                       <span className="text-xs text-muted-foreground">
                         {new Date(bet.created_at).toLocaleString("tr-TR")}
                       </span>
                     </div>
                     <div className="space-y-1.5">
                       {selections.map((sel: any, i: number) => (
-                        <div key={i} className="flex justify-between text-sm">
-                          <div>
-                            <span className="text-muted-foreground">{sel.matchLabel}</span>
-                            <span className="mx-2 text-foreground font-medium">{sel.selection}</span>
+                        <div key={i} className={`flex items-center justify-between text-sm p-2 rounded-lg ${
+                          sel.result === "won" ? "bg-green-500/10" :
+                          sel.result === "lost" ? "bg-red-500/10" : ""
+                        }`}>
+                          <div className="flex items-center gap-2">
+                            {sel.result === "won" && <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />}
+                            {sel.result === "lost" && <XCircle className="h-4 w-4 text-red-500 shrink-0" />}
+                            {!sel.result && <Clock className="h-4 w-4 text-muted-foreground shrink-0" />}
+                            <div>
+                              <span className="text-muted-foreground">{sel.matchLabel}</span>
+                              <span className="mx-2 text-foreground font-medium">{sel.selection}</span>
+                            </div>
                           </div>
                           <span className="font-bold text-primary">{Number(sel.odds).toFixed(2)}</span>
                         </div>
