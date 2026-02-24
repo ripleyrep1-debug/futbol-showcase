@@ -9,7 +9,7 @@ const HeroSection = () => {
         <img
           src={heroBanner}
           alt="BlueBet - Canlı Futbol Verileri"
-          className="w-full h-[220px] sm:h-[300px] md:h-[400px] lg:h-[480px] object-cover object-center"
+          className="w-full h-[180px] sm:h-[300px] md:h-[400px] lg:h-[480px] object-cover object-center"
         />
         {/* Gradient overlay for text readability */}
         <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />

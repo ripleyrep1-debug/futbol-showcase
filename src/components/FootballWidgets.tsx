@@ -19,10 +19,10 @@ const Widget = ({ attrs, className }: { attrs: Record<string, string>; className
 
 const FootballWidgets = () => {
   return (
-    <div className="space-y-10 py-8">
+    <div className="space-y-6 sm:space-y-10 py-4 sm:py-8">
 
       {/* Today's Games (combines live + all) */}
-      <section id="live" className="container mx-auto px-4">
+      <section id="live" className="container mx-auto px-2 sm:px-4">
         <h2 className="section-title mb-5 flex items-center gap-2">
           <span className="inline-block w-1 h-7 rounded-full bg-primary" />
           Bugünün Maçları
@@ -41,7 +41,7 @@ const FootballWidgets = () => {
       </section>
 
       {/* Süper Lig Standings */}
-      <section id="leagues" className="container mx-auto px-4">
+      <section id="leagues" className="container mx-auto px-2 sm:px-4">
         <h2 className="section-title mb-5 flex items-center gap-2">
           <span className="inline-block w-1 h-7 rounded-full bg-accent" />
           🇹🇷 Süper Lig Puan Durumu
@@ -57,7 +57,7 @@ const FootballWidgets = () => {
       </section>
 
       {/* Premier League Standings */}
-      <section id="standings" className="container mx-auto px-4">
+      <section id="standings" className="container mx-auto px-2 sm:px-4">
         <h2 className="section-title mb-5 flex items-center gap-2">
           <span className="inline-block w-1 h-7 rounded-full bg-primary" />
           🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier Lig Puan Durumu
@@ -73,7 +73,7 @@ const FootballWidgets = () => {
       </section>
 
       {/* All Leagues */}
-      <section className="container mx-auto px-4">
+      <section className="container mx-auto px-2 sm:px-4">
         <h2 className="section-title mb-5 flex items-center gap-2">
           <span className="inline-block w-1 h-7 rounded-full bg-accent" />
           Tüm Ligler
@@ -87,7 +87,7 @@ const FootballWidgets = () => {
       </section>
 
       {/* H2H */}
-      <section id="stats" className="container mx-auto px-4">
+      <section id="stats" className="container mx-auto px-2 sm:px-4">
         <h2 className="section-title mb-5 flex items-center gap-2">
           <span className="inline-block w-1 h-7 rounded-full bg-primary" />
           🔥 Galatasaray vs Fenerbahçe
