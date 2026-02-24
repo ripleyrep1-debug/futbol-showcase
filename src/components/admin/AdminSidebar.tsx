@@ -2,7 +2,7 @@ import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard, Users, Trophy, CreditCard, Settings, LogOut,
   ChevronLeft, ChevronRight, TrendingUp, ExternalLink, BarChart3,
-  Database, History, FileText, ToggleLeft,
+  Database, History, FileText, ToggleLeft, Headphones,
 } from "lucide-react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -73,6 +73,12 @@ const AdminSidebar = () => {
       items: [
         { label: "Ödemeler", to: "/admin/odemeler", icon: CreditCard, badge: pendingPayments },
         { label: "İşlem Geçmişi", to: "/admin/islem-gecmisi", icon: FileText },
+      ],
+    },
+    {
+      label: "DESTEK",
+      items: [
+        { label: "Canlı Destek", to: "/admin/destek", icon: Headphones },
       ],
     },
     {

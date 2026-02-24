@@ -173,6 +173,68 @@ export type Database = {
         }
         Relationships: []
       }
+      support_conversations: {
+        Row: {
+          created_at: string
+          id: string
+          status: string
+          updated_at: string
+          user_id: string
+          user_name: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          status?: string
+          updated_at?: string
+          user_id: string
+          user_name?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+          user_name?: string | null
+        }
+        Relationships: []
+      }
+      support_messages: {
+        Row: {
+          conversation_id: string
+          created_at: string
+          id: string
+          message: string
+          sender_id: string | null
+          sender_type: string
+        }
+        Insert: {
+          conversation_id: string
+          created_at?: string
+          id?: string
+          message: string
+          sender_id?: string | null
+          sender_type?: string
+        }
+        Update: {
+          conversation_id?: string
+          created_at?: string
+          id?: string
+          message?: string
+          sender_id?: string | null
+          sender_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "support_messages_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "support_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transactions: {
         Row: {
           amount: number

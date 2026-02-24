@@ -23,6 +23,7 @@ import DataManagement from "./pages/admin/DataManagement";
 import TransactionHistory from "./pages/admin/TransactionHistory";
 import BetHistory from "./pages/admin/BetHistory";
 import BetTypeSettings from "./pages/admin/BetTypeSettings";
+import Support from "./pages/admin/Support";
 import LiveSupportChat from "./components/LiveSupportChat";
 
 const queryClient = new QueryClient();
@@ -53,6 +54,7 @@ const App = () => (
               <Route path="islem-gecmisi" element={<TransactionHistory />} />
               <Route path="bahis-gecmisi" element={<BetHistory />} />
               <Route path="bahis-turleri" element={<BetTypeSettings />} />
+              <Route path="destek" element={<Support />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
