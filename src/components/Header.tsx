@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Menu, X, User, LogIn } from "lucide-react";
-import bluebetLogo from "@/assets/bluebet-logo-clean.png";
+import bluebetLogo from "@/assets/bluebet-logo-new.png";
 
 const navLinks = [
   { label: "Ana Sayfa", href: "#" },
@@ -22,7 +22,7 @@ const Header = () => {
             <img
               src={bluebetLogo}
               alt="BlueBet"
-              className="h-10 w-10 rounded-full object-cover"
+              className="h-10 w-10 object-contain"
             />
             <span className="font-display text-xl md:text-2xl font-bold tracking-wide text-primary">
               BLUE<span className="text-accent">BET</span>
