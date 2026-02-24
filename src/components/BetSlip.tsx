@@ -21,7 +21,7 @@ const BetSlip = ({ bets, onRemoveBet, onClearAll }: BetSlipProps) => {
   return (
     <>
       {/* Mobile toggle bar */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 lg:hidden">
+      <div className="fixed bottom-14 left-0 right-0 z-50 lg:hidden">
         <button
           onClick={() => setIsOpen(!isOpen)}
           className="w-full flex items-center justify-between px-4 py-3 bg-primary text-primary-foreground font-bold"

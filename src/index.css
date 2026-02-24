@@ -178,6 +178,11 @@
   background: hsl(var(--primary));
 }
 
+/* Safe area for bottom nav */
+.safe-area-bottom {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
 /* API-SPORTS Custom Theme - BlueBet */
 api-sports-widget[data-theme="BlueBet"] {
   --primary-color: #2196F3;
