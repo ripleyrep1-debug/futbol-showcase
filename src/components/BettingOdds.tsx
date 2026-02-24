@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Clock, Zap, ChevronDown, ChevronUp, Trophy, Star, Loader2, AlertCircle, RefreshCw, Search, X } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 import {
   fetchTodaysFixtures,
   fetchOddsByDate,
@@ -155,37 +157,37 @@ const MatchCard = ({
   match,
   selectedBets,
   onAddBet,
+  disabledBetIds,
 }: {
   match: ParsedMatch;
   selectedBets: BetSelection[];
   onAddBet: (b: BetSelection) => void;
+  disabledBetIds: Set<number>;
 }) => {
   const [expanded, setExpanded] = useState(false);
   const matchLabel = `${match.homeTeam} vs ${match.awayTeam}`;
   const hasBets = match.allBets.length > 0;
 
-  // Group bets by category
+  // Group bets by category, filtering out disabled ones
   const groupedBets = useMemo(() => {
-    const betIdSet = new Set(match.allBets.map((b) => b.id));
     const groups: { label: string; bets: ApiOddsBet[] }[] = [];
     const usedIds = new Set<number>();
 
-    Object.values(BET_CATEGORIES).forEach((cat) => {
-      const catBets = match.allBets.filter((b) => cat.betIds.includes(b.id) && !usedIds.has(b.id));
+    Object.entries(BET_CATEGORIES).forEach(([, cat]) => {
+      const catBets = match.allBets.filter((b) => cat.betIds.includes(b.id) && !usedIds.has(b.id) && !disabledBetIds.has(b.id));
       catBets.forEach((b) => usedIds.add(b.id));
       if (catBets.length > 0) {
         groups.push({ label: cat.label, bets: catBets });
       }
     });
 
-    // Any remaining uncategorized bets
-    const remaining = match.allBets.filter((b) => !usedIds.has(b.id));
+    const remaining = match.allBets.filter((b) => !usedIds.has(b.id) && !disabledBetIds.has(b.id));
     if (remaining.length > 0) {
       groups.push({ label: "📊 Diğer Bahisler", bets: remaining });
     }
 
     return groups;
-  }, [match.allBets]);
+  }, [match.allBets, disabledBetIds]);
 
   // Quick 1X2 odds for collapsed view
   const matchWinner = match.allBets.find((b) => b.id === 1);
@@ -378,6 +380,29 @@ const BettingOdds = ({ onAddBet, selectedBets }: BettingOddsProps) => {
   const [searchOpen, setSearchOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
+  // Fetch site settings for disabled bet categories
+  const { data: siteSettings } = useQuery({
+    queryKey: ["site-settings"],
+    queryFn: async () => {
+      const { data } = await supabase.from("site_settings").select("*");
+      const map: Record<string, string> = {};
+      data?.forEach((s: any) => { map[s.key] = s.value; });
+      return map;
+    },
+    staleTime: 60000,
+  });
+
+  const disabledBetIds = useMemo(() => {
+    const disabled = new Set<number>();
+    if (!siteSettings) return disabled;
+    Object.entries(BET_CATEGORIES).forEach(([key, cat]) => {
+      if (siteSettings[`bet_category_${key}`] === "false") {
+        cat.betIds.forEach((id) => disabled.add(id));
+      }
+    });
+    return disabled;
+  }, [siteSettings]);
+
   const loadData = async () => {
     setLoading(true);
     setError(null);
@@ -557,6 +582,7 @@ const BettingOdds = ({ onAddBet, selectedBets }: BettingOddsProps) => {
                 match={match}
                 selectedBets={selectedBets}
                 onAddBet={onAddBet}
+                disabledBetIds={disabledBetIds}
               />
             ))}
           </div>
