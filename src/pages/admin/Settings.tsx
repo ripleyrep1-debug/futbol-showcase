@@ -101,6 +101,68 @@ const Settings = () => {
           </CardContent>
         </Card>
 
+        {/* Blackjack Limits */}
+        <Card className="border-border">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              🃏 Blackjack Limitleri
+            </CardTitle>
+            <CardDescription>Blackjack oyunu bahis limitlerini ve kurallarını ayarlayın</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium text-foreground">Blackjack Aktif</p>
+                <p className="text-sm text-muted-foreground">Oyunu aç/kapat</p>
+              </div>
+              <Switch
+                checked={values.blackjack_enabled !== "false"}
+                onCheckedChange={() => update("blackjack_enabled", values.blackjack_enabled === "false" ? "true" : "false")}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Min Bahis (₺)</label>
+                <Input type="number" value={values.blackjack_min_bet ?? "10"} onChange={(e) => update("blackjack_min_bet", e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Max Bahis (₺)</label>
+                <Input type="number" value={values.blackjack_max_bet ?? "500"} onChange={(e) => update("blackjack_max_bet", e.target.value)} />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">BJ Ödemesi (x)</label>
+                <Input type="number" step="0.1" value={values.blackjack_payout ?? "2.5"} onChange={(e) => update("blackjack_payout", e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Kasa Avantajı (%)</label>
+                <Input type="number" value={values.blackjack_house_edge ?? "67"} onChange={(e) => update("blackjack_house_edge", e.target.value)} />
+              </div>
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium text-foreground">Split İzni</p>
+                <p className="text-sm text-muted-foreground">Oyuncuların el bölmesine izin ver</p>
+              </div>
+              <Switch
+                checked={values.blackjack_allow_split !== "false"}
+                onCheckedChange={() => update("blackjack_allow_split", values.blackjack_allow_split === "false" ? "true" : "false")}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium text-foreground">Double Down İzni</p>
+                <p className="text-sm text-muted-foreground">Oyuncuların ikiye katlamasına izin ver</p>
+              </div>
+              <Switch
+                checked={values.blackjack_allow_double !== "false"}
+                onCheckedChange={() => update("blackjack_allow_double", values.blackjack_allow_double === "false" ? "true" : "false")}
+              />
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Commission & Accumulator */}
         <Card className="border-border">
           <CardHeader>
