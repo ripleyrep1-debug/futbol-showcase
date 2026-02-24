@@ -46,6 +46,16 @@ interface ParsedMatch {
 const FINISHED_STATUSES = ["FT", "AET", "PEN", "WO", "AWD", "CANC", "ABD"];
 const POSTPONED_STATUSES = ["PST", "SUSP", "INT"];
 
+// Turkish club names (lowercase) for matching in international competitions
+const TURKISH_TEAMS = [
+  "galatasaray", "fenerbahce", "fenerbahçe", "besiktas", "beşiktaş",
+  "trabzonspor", "basaksehir", "başakşehir", "istanbul", "sivasspor",
+  "adana demirspor", "antalyaspor", "alanyaspor", "konyaspor",
+  "kayserispor", "gaziantep", "hatayspor", "kasimpasa", "kasımpaşa",
+  "pendikspor", "rizespor", "samsunspor", "ankaragücü", "ankaragucu",
+  "eyupspor", "eyüpspor", "goztepe", "göztepe", "bodrumspor",
+];
+
 function buildMatches(fixtures: ApiFixture[], oddsMap: Map<number, ApiOddsResponse>): ParsedMatch[] {
   return fixtures
     .filter((f) => !FINISHED_STATUSES.includes(f.fixture.status.short) && !POSTPONED_STATUSES.includes(f.fixture.status.short))
@@ -466,7 +476,14 @@ const BettingOdds = ({ onAddBet, selectedBets, selectedLeague }: BettingOddsProp
 
     // Apply league filter from sidebar
     if (selectedLeague && selectedLeague !== "all" && selectedLeague !== "popular") {
-      if (selectedLeague.startsWith("country:")) {
+      if (selectedLeague === "turkish_teams") {
+        // Show any match involving a Turkish team (domestic + international)
+        filtered = filtered.filter((m) =>
+          m.leagueCountry === "Turkey" || TURKISH_TEAMS.some((t) =>
+            m.homeTeam.toLowerCase().includes(t) || m.awayTeam.toLowerCase().includes(t)
+          )
+        );
+      } else if (selectedLeague.startsWith("country:")) {
         const country = selectedLeague.replace("country:", "");
         filtered = filtered.filter((m) => m.leagueCountry === country);
       } else if (selectedLeague.startsWith("league:")) {
@@ -494,10 +511,18 @@ const BettingOdds = ({ onAddBet, selectedBets, selectedLeague }: BettingOddsProp
       if (activeFilter === "live") filtered = filtered.filter((m) => m.isLive);
       else if (activeFilter === "upcoming") filtered = filtered.filter((m) => !m.isLive);
       else if (activeFilter === "popular") {
-        const withOdds = filtered.filter((m) => m.allBets.length > 0);
-        if (withOdds.length > 0) {
-          filtered = withOdds.sort((a, b) => b.allBets.length - a.allBets.length);
-        }
+        // Turkish matches are always popular, plus matches with odds
+        const isTurkish = (m: ParsedMatch) =>
+          m.leagueCountry === "Turkey" || TURKISH_TEAMS.some((t) =>
+            m.homeTeam.toLowerCase().includes(t) || m.awayTeam.toLowerCase().includes(t)
+          );
+        filtered = filtered.filter((m) => m.allBets.length > 0 || isTurkish(m));
+        filtered.sort((a, b) => {
+          const aTR = isTurkish(a) ? 0 : 1;
+          const bTR = isTurkish(b) ? 0 : 1;
+          if (aTR !== bTR) return aTR - bTR;
+          return b.allBets.length - a.allBets.length;
+        });
       }
       else if (activeFilter === "all") { /* show all */ }
     }
