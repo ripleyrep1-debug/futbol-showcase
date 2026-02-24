@@ -89,9 +89,21 @@ function canSplit(hand: Card[]): boolean { return hand.length === 2 && cardValue
 // Determines if house should win this round
 let houseWinsThisRound = false;
 
-function riggedDeal(deck: Card[], houseEdge: number): { playerHand: Card[]; dealerHand: Card[]; remainingDeck: Card[] } {
+// Dynamic house edge: lower bets = friendlier, higher bets = house wins more
+// betRatio = betAmount / maxBet (0..1)
+// At minimum bet: effective edge = baseEdge * 0.4 (very player-friendly)
+// At maximum bet: effective edge = min(baseEdge * 1.3, 95) (strongly house-favored)
+function calcDynamicEdge(baseEdge: number, betAmount: number, minBet: number, maxBet: number): number {
+  const range = Math.max(maxBet - minBet, 1);
+  const betRatio = Math.min(Math.max((betAmount - minBet) / range, 0), 1);
+  // Scale from 0.4x at low end to 1.3x at high end
+  const multiplier = 0.4 + betRatio * 0.9;
+  return Math.min(baseEdge * multiplier, 95);
+}
+
+function riggedDeal(deck: Card[], effectiveEdge: number): { playerHand: Card[]; dealerHand: Card[]; remainingDeck: Card[] } {
   const d = [...deck];
-  houseWinsThisRound = Math.random() * 100 < houseEdge;
+  houseWinsThisRound = Math.random() * 100 < effectiveEdge;
   if (houseWinsThisRound) {
     const dc1 = d.find(c => ["10","J","Q","K"].includes(c.rank))!; d.splice(d.indexOf(dc1), 1);
     const dc2 = d.find(c => ["7","8","9","10","J","Q","K","A"].includes(c.rank))!; d.splice(d.indexOf(dc2), 1);
@@ -252,7 +264,8 @@ const Blackjack = () => {
     invalidateProfiles();
 
     const newDeck = shuffleDeck(createDeck());
-    const { playerHand: ph, dealerHand: dh, remainingDeck } = riggedDeal(newDeck, houseEdge);
+    const effectiveEdge = calcDynamicEdge(houseEdge, betAmount, minBet, maxBet);
+    const { playerHand: ph, dealerHand: dh, remainingDeck } = riggedDeal(newDeck, effectiveEdge);
 
     setDeck(remainingDeck);
     setDealerHand([]);
