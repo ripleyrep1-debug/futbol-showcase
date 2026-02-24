@@ -76,8 +76,8 @@ const Index = () => {
 
         <main className="flex-1 min-w-0 pb-20 lg:pb-0">
           <HeroSection />
-          <BettingOdds onAddBet={handleAddBet} selectedBets={bets} selectedLeague={selectedLeague} />
           <GamesSection />
+          <BettingOdds onAddBet={handleAddBet} selectedBets={bets} selectedLeague={selectedLeague} />
           <FootballWidgets />
           <Footer />
         </main>
