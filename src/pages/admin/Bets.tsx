@@ -11,12 +11,13 @@ import {
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Search, CheckCircle, XCircle, Ban } from "lucide-react";
+import { Search, CheckCircle, XCircle, Ban, ChevronDown, ChevronUp, Undo2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const Bets = () => {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
+  const [expandedBetId, setExpandedBetId] = useState<string | null>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -45,17 +46,29 @@ const Bets = () => {
       const { error } = await supabase.from("bets").update({ status: newStatus }).eq("id", id);
       if (error) throw error;
 
-      // If won, add winnings to user balance and create transaction
       if (newStatus === "won") {
         const { data: profile } = await supabase.from("profiles").select("balance").eq("id", userId).single();
         if (profile) {
           await supabase.from("profiles").update({ balance: Number(profile.balance) + potentialWin }).eq("id", userId);
           await supabase.from("transactions").insert({
-            user_id: userId,
-            type: "win",
-            amount: potentialWin,
+            user_id: userId, type: "win", amount: potentialWin,
             description: `Bahis kazancı - Bahis #${id.slice(0, 8)}`,
           });
+        }
+      }
+
+      // Refund on cancel
+      if (newStatus === "cancelled") {
+        const { data: bet } = await supabase.from("bets").select("stake").eq("id", id).single();
+        if (bet) {
+          const { data: profile } = await supabase.from("profiles").select("balance").eq("id", userId).single();
+          if (profile) {
+            await supabase.from("profiles").update({ balance: Number(profile.balance) + Number(bet.stake) }).eq("id", userId);
+            await supabase.from("transactions").insert({
+              user_id: userId, type: "refund", amount: Number(bet.stake),
+              description: `Bahis iptali iadesi - Bahis #${id.slice(0, 8)}`,
+            });
+          }
         }
       }
     },
@@ -63,6 +76,25 @@ const Bets = () => {
       queryClient.invalidateQueries({ queryKey: ["admin-bets"] });
       queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
       toast({ title: "Başarılı", description: "Bahis durumu güncellendi." });
+    },
+    onError: (err: Error) => {
+      toast({ title: "Hata", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const updateSelectionResult = useMutation({
+    mutationFn: async ({ betId, selectionIndex, result }: { betId: string; selectionIndex: number; result: "won" | "lost" }) => {
+      const { data: bet, error: fetchErr } = await supabase.from("bets").select("selections").eq("id", betId).single();
+      if (fetchErr) throw fetchErr;
+      const selections = Array.isArray(bet.selections) ? [...bet.selections] : [];
+      const sel = { ...(selections[selectionIndex] as any), result };
+      selections[selectionIndex] = sel;
+      const { error } = await supabase.from("bets").update({ selections } as any).eq("id", betId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["admin-bets"] });
+      toast({ title: "Başarılı", description: "Seçim sonucu güncellendi." });
     },
     onError: (err: Error) => {
       toast({ title: "Hata", description: err.message, variant: "destructive" });
@@ -79,6 +111,14 @@ const Bets = () => {
     won: { label: "Kazandı", variant: "default" },
     lost: { label: "Kaybetti", variant: "destructive" },
     cancelled: { label: "İptal", variant: "outline" },
+  };
+
+  const getSelectionStats = (selections: any[]) => {
+    const total = selections.length;
+    const settled = selections.filter((s: any) => s.result === "won" || s.result === "lost").length;
+    const allWon = selections.every((s: any) => s.result === "won");
+    const anyLost = selections.some((s: any) => s.result === "lost");
+    return { total, settled, allWon, anyLost, allSettled: settled === total && total > 0 };
   };
 
   return (
@@ -118,6 +158,7 @@ const Bets = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead></TableHead>
                     <TableHead>ID</TableHead>
                     <TableHead>Kullanıcı</TableHead>
                     <TableHead>Bahis</TableHead>
@@ -132,55 +173,112 @@ const Bets = () => {
                 <TableBody>
                   {filtered.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="text-center text-muted-foreground">Bahis bulunamadı</TableCell>
+                      <TableCell colSpan={10} className="text-center text-muted-foreground">Bahis bulunamadı</TableCell>
                     </TableRow>
                   ) : (
                     filtered.map((bet: any) => {
                       const selections = Array.isArray(bet.selections) ? bet.selections : [];
+                      const isExpanded = expandedBetId === bet.id;
+                      const stats = getSelectionStats(selections);
                       return (
-                        <TableRow key={bet.id}>
-                          <TableCell className="text-xs text-muted-foreground font-mono">{bet.id.slice(0, 8)}</TableCell>
-                          <TableCell className="font-medium">{bet.display_name}</TableCell>
-                          <TableCell>₺{Number(bet.stake).toLocaleString("tr-TR")}</TableCell>
-                          <TableCell>{Number(bet.total_odds).toFixed(2)}</TableCell>
-                          <TableCell className="font-semibold">₺{Number(bet.potential_win).toLocaleString("tr-TR")}</TableCell>
-                          <TableCell>
-                            <div className="max-w-xs text-xs text-muted-foreground">
-                              {selections.length} seçim
-                              {selections.length > 0 && (
-                                <div className="mt-1 space-y-0.5">
-                                  {selections.slice(0, 3).map((s: any, i: number) => (
-                                    <div key={i}>{s.match || s.home_team} — {s.selection || s.bet_value} @ {s.odd}</div>
-                                  ))}
-                                  {selections.length > 3 && <div>+{selections.length - 3} daha</div>}
+                        <>
+                          <TableRow key={bet.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setExpandedBetId(isExpanded ? null : bet.id)}>
+                            <TableCell className="w-8">
+                              {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                            </TableCell>
+                            <TableCell className="text-xs text-muted-foreground font-mono">{bet.id.slice(0, 8)}</TableCell>
+                            <TableCell className="font-medium">{bet.display_name}</TableCell>
+                            <TableCell>₺{Number(bet.stake).toLocaleString("tr-TR")}</TableCell>
+                            <TableCell>{Number(bet.total_odds).toFixed(2)}</TableCell>
+                            <TableCell className="font-semibold">₺{Number(bet.potential_win).toLocaleString("tr-TR")}</TableCell>
+                            <TableCell>
+                              <span className="text-xs text-muted-foreground">
+                                {stats.settled}/{stats.total} sonuçlandı
+                              </span>
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant={statusMap[bet.status]?.variant ?? "secondary"}>
+                                {statusMap[bet.status]?.label ?? bet.status}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-muted-foreground text-sm">
+                              {new Date(bet.created_at).toLocaleString("tr-TR")}
+                            </TableCell>
+                            <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
+                              {bet.status === "pending" && (
+                                <div className="flex items-center justify-end gap-1">
+                                  <Button size="sm" variant="default" onClick={() => settleBet.mutate({ id: bet.id, newStatus: "won", userId: bet.user_id, potentialWin: Number(bet.potential_win) })}>
+                                    <CheckCircle className="h-4 w-4 mr-1" /> Kazandı
+                                  </Button>
+                                  <Button size="sm" variant="destructive" onClick={() => settleBet.mutate({ id: bet.id, newStatus: "lost", userId: bet.user_id, potentialWin: 0 })}>
+                                    <XCircle className="h-4 w-4 mr-1" /> Kaybetti
+                                  </Button>
+                                  <Button size="sm" variant="outline" onClick={() => settleBet.mutate({ id: bet.id, newStatus: "cancelled", userId: bet.user_id, potentialWin: 0 })}>
+                                    <Ban className="h-4 w-4 mr-1" /> İptal
+                                  </Button>
                                 </div>
                               )}
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <Badge variant={statusMap[bet.status]?.variant ?? "secondary"}>
-                              {statusMap[bet.status]?.label ?? bet.status}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-muted-foreground text-sm">
-                            {new Date(bet.created_at).toLocaleString("tr-TR")}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {bet.status === "pending" && (
-                              <div className="flex items-center justify-end gap-1">
-                                <Button size="sm" variant="default" onClick={() => settleBet.mutate({ id: bet.id, newStatus: "won", userId: bet.user_id, potentialWin: Number(bet.potential_win) })}>
-                                  <CheckCircle className="h-4 w-4 mr-1" /> Kazandı
-                                </Button>
-                                <Button size="sm" variant="destructive" onClick={() => settleBet.mutate({ id: bet.id, newStatus: "lost", userId: bet.user_id, potentialWin: 0 })}>
-                                  <XCircle className="h-4 w-4 mr-1" /> Kaybetti
-                                </Button>
-                                <Button size="sm" variant="outline" onClick={() => settleBet.mutate({ id: bet.id, newStatus: "cancelled", userId: bet.user_id, potentialWin: 0 })}>
-                                  <Ban className="h-4 w-4 mr-1" /> İptal
-                                </Button>
-                              </div>
-                            )}
-                          </TableCell>
-                        </TableRow>
+                            </TableCell>
+                          </TableRow>
+                          {isExpanded && (
+                            <TableRow key={`${bet.id}-detail`}>
+                              <TableCell colSpan={10} className="bg-muted/30 p-0">
+                                <div className="p-4 space-y-3">
+                                  <div className="text-sm font-medium text-foreground mb-2">Seçim Detayları — {stats.settled}/{stats.total} sonuçlandı</div>
+                                  <div className="space-y-2">
+                                    {selections.map((sel: any, i: number) => (
+                                      <div key={i} className={`flex items-center justify-between p-3 rounded-lg border ${
+                                        sel.result === "won" ? "bg-green-500/10 border-green-500/30" :
+                                        sel.result === "lost" ? "bg-red-500/10 border-red-500/30" :
+                                        "bg-card border-border"
+                                      }`}>
+                                        <div className="flex-1 space-y-0.5">
+                                          <div className="text-sm font-medium text-foreground">{sel.matchLabel || sel.match || `${sel.home_team} vs ${sel.away_team}`}</div>
+                                          <div className="text-xs text-muted-foreground">
+                                            Seçim: <span className="font-medium text-foreground">{sel.selection || sel.bet_value}</span> — Oran: <span className="font-medium text-foreground">{Number(sel.odds || sel.odd).toFixed(2)}</span>
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center gap-2">
+                                          {sel.result === "won" && <Badge variant="default" className="bg-green-600">✅ Kazandı</Badge>}
+                                          {sel.result === "lost" && <Badge variant="destructive">❌ Kaybetti</Badge>}
+                                          {!sel.result && <Badge variant="secondary">⏳ Bekliyor</Badge>}
+                                          {bet.status === "pending" && (
+                                            <div className="flex gap-1 ml-2" onClick={(e) => e.stopPropagation()}>
+                                              <Button size="sm" variant={sel.result === "won" ? "default" : "outline"} className="h-7 text-xs"
+                                                onClick={() => updateSelectionResult.mutate({ betId: bet.id, selectionIndex: i, result: "won" })}>
+                                                ✅
+                                              </Button>
+                                              <Button size="sm" variant={sel.result === "lost" ? "destructive" : "outline"} className="h-7 text-xs"
+                                                onClick={() => updateSelectionResult.mutate({ betId: bet.id, selectionIndex: i, result: "lost" })}>
+                                                ❌
+                                              </Button>
+                                            </div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                  {bet.status === "pending" && stats.allSettled && (
+                                    <div className="mt-3 p-3 rounded-lg border border-primary/30 bg-primary/5 flex items-center justify-between">
+                                      <span className="text-sm text-foreground">
+                                        Tüm seçimler sonuçlandı — Öneri: {stats.allWon ? "✅ Kazandı" : "❌ Kaybetti"}
+                                      </span>
+                                      <Button size="sm" variant={stats.allWon ? "default" : "destructive"}
+                                        onClick={() => settleBet.mutate({
+                                          id: bet.id,
+                                          newStatus: stats.allWon ? "won" : "lost",
+                                          userId: bet.user_id,
+                                          potentialWin: stats.allWon ? Number(bet.potential_win) : 0,
+                                        })}>
+                                        {stats.allWon ? "Kazandı Olarak Sonuçlandır" : "Kaybetti Olarak Sonuçlandır"}
+                                      </Button>
+                                    </div>
+                                  )}
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </>
                       );
                     })
                   )}
