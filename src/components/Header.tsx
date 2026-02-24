@@ -10,7 +10,11 @@ const navLinks = [
   { label: "İstatistikler", href: "#stats" },
 ];
 
-const Header = () => {
+interface HeaderProps {
+  onToggleSidebar?: () => void;
+}
+
+const Header = ({ onToggleSidebar }: HeaderProps) => {
   const [mobileOpen, setMobileOpen] = useState(false);
 
   return (
@@ -54,7 +58,10 @@ const Header = () => {
             </button>
             <button
               className="lg:hidden p-2 rounded-lg border border-border text-foreground"
-              onClick={() => setMobileOpen(!mobileOpen)}
+              onClick={() => {
+                onToggleSidebar?.();
+                setMobileOpen(!mobileOpen);
+              }}
             >
               {mobileOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
             </button>
