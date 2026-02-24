@@ -21,17 +21,17 @@ const FootballWidgets = () => {
   return (
     <div className="space-y-10 py-8">
 
-      {/* Live Games */}
+      {/* Today's Games (combines live + all) */}
       <section id="live" className="container mx-auto px-4">
         <h2 className="section-title mb-5 flex items-center gap-2">
           <span className="inline-block w-1 h-7 rounded-full bg-primary" />
-          Canlı Maçlar
+          Bugünün Maçları
         </h2>
         <div className="rounded-xl border border-border overflow-hidden">
           <Widget attrs={{
             "data-type": "games",
             "data-show-toolbar": "true",
-            "data-tab": "live",
+            "data-tab": "all",
             "data-refresh": "15",
             "data-target-game": "modal",
             "data-target-standings": "modal",
@@ -40,68 +40,33 @@ const FootballWidgets = () => {
         </div>
       </section>
 
-      {/* Today's Games */}
-      <section className="container mx-auto px-4">
-        <h2 className="section-title mb-5 flex items-center gap-2">
-          <span className="inline-block w-1 h-7 rounded-full bg-accent" />
-          Bugünün Maçları
-        </h2>
-        <div className="rounded-xl border border-border overflow-hidden">
-          <Widget attrs={{
-            "data-type": "games",
-            "data-show-toolbar": "true",
-            "data-tab": "all",
-            "data-refresh": "30",
-            "data-target-game": "modal",
-            "data-games-style": "1",
-          }} />
-        </div>
-      </section>
-
-      {/* Süper Lig */}
+      {/* Süper Lig Standings */}
       <section id="leagues" className="container mx-auto px-4">
         <h2 className="section-title mb-5 flex items-center gap-2">
-          <span className="inline-block w-1 h-7 rounded-full bg-primary" />
-          🇹🇷 Süper Lig
-        </h2>
-        <div className="rounded-xl border border-border overflow-hidden">
-          <Widget attrs={{
-            "data-type": "league",
-            "data-league": "203",
-            "data-standings": "true",
-            "data-target-game": "modal",
-            "data-refresh": "30",
-          }} />
-        </div>
-      </section>
-
-      {/* Standings */}
-      <section id="standings" className="container mx-auto px-4">
-        <h2 className="section-title mb-5 flex items-center gap-2">
           <span className="inline-block w-1 h-7 rounded-full bg-accent" />
-          Premier Lig Puan Durumu
+          🇹🇷 Süper Lig Puan Durumu
         </h2>
         <div className="rounded-xl border border-border overflow-hidden">
           <Widget attrs={{
             "data-type": "standings",
-            "data-league": "39",
-            "data-season": "2025",
+            "data-league": "203",
+            "data-season": "2024",
             "data-target-team": "modal",
           }} />
         </div>
       </section>
 
-      {/* La Liga */}
-      <section className="container mx-auto px-4">
+      {/* Premier League Standings */}
+      <section id="standings" className="container mx-auto px-4">
         <h2 className="section-title mb-5 flex items-center gap-2">
           <span className="inline-block w-1 h-7 rounded-full bg-primary" />
-          🇪🇸 La Liga Puan Durumu
+          🏴󠁧󠁢󠁥󠁮󠁧󠁿 Premier Lig Puan Durumu
         </h2>
         <div className="rounded-xl border border-border overflow-hidden">
           <Widget attrs={{
             "data-type": "standings",
-            "data-league": "140",
-            "data-season": "2025",
+            "data-league": "39",
+            "data-season": "2024",
             "data-target-team": "modal",
           }} />
         </div>
