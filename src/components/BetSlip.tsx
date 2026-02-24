@@ -1,5 +1,9 @@
 import { useState } from "react";
-import { X, Trash2, ChevronUp, ChevronDown, Receipt } from "lucide-react";
+import { X, Trash2, ChevronUp, ChevronDown, Receipt, Loader2 } from "lucide-react";
+import { useAuth } from "@/hooks/useAuth";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 import type { BetSelection } from "./BettingOdds";
 
 interface BetSlipProps {
@@ -11,10 +15,60 @@ interface BetSlipProps {
 const BetSlip = ({ bets, onRemoveBet, onClearAll }: BetSlipProps) => {
   const [isOpen, setIsOpen] = useState(false);
   const [stake, setStake] = useState("");
+  const [placing, setPlacing] = useState(false);
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
 
   const totalOdds = bets.reduce((acc, b) => acc * b.odds, 1);
   const stakeNum = parseFloat(stake) || 0;
   const potentialWin = stakeNum * totalOdds;
+
+  const handlePlaceBet = async () => {
+    if (!user) {
+      toast.error("Bahis yapmak için giriş yapmalısınız.");
+      return;
+    }
+    if (stakeNum <= 0) {
+      toast.error("Geçerli bir yatırım tutarı girin.");
+      return;
+    }
+    if (bets.length === 0) return;
+
+    setPlacing(true);
+    try {
+      const selections = bets.map((b) => ({
+        matchId: b.matchId,
+        matchLabel: b.matchLabel,
+        selection: b.selection,
+        odds: b.odds,
+      }));
+
+      const { data, error } = await supabase.rpc("place_bet", {
+        p_selections: selections as any,
+        p_stake: stakeNum,
+        p_total_odds: parseFloat(totalOdds.toFixed(2)),
+        p_potential_win: parseFloat(potentialWin.toFixed(2)),
+      });
+
+      if (error) {
+        if (error.message.includes("Insufficient balance")) {
+          toast.error("Yetersiz bakiye! Lütfen bakiye yükleyin.");
+        } else {
+          toast.error(error.message || "Bahis oluşturulamadı.");
+        }
+        return;
+      }
+
+      toast.success("Bahis başarıyla oluşturuldu! 🎉");
+      onClearAll();
+      setStake("");
+      queryClient.invalidateQueries({ queryKey: ["user-profile"] });
+    } catch (err: any) {
+      toast.error(err.message || "Bir hata oluştu.");
+    } finally {
+      setPlacing(false);
+    }
+  };
 
   if (bets.length === 0) return null;
 
@@ -36,7 +90,6 @@ const BetSlip = ({ bets, onRemoveBet, onClearAll }: BetSlipProps) => {
           </div>
         </button>
 
-        {/* Mobile expanded slip */}
         {isOpen && (
           <div className="bg-card border-t border-border max-h-[65vh] overflow-y-auto p-3 space-y-2">
             <SlipContent
@@ -47,6 +100,8 @@ const BetSlip = ({ bets, onRemoveBet, onClearAll }: BetSlipProps) => {
               setStake={setStake}
               totalOdds={totalOdds}
               potentialWin={potentialWin}
+              onPlaceBet={handlePlaceBet}
+              placing={placing}
             />
           </div>
         )}
@@ -73,6 +128,8 @@ const BetSlip = ({ bets, onRemoveBet, onClearAll }: BetSlipProps) => {
               setStake={setStake}
               totalOdds={totalOdds}
               potentialWin={potentialWin}
+              onPlaceBet={handlePlaceBet}
+              placing={placing}
             />
           </div>
         </div>
@@ -88,6 +145,8 @@ function SlipContent({
   setStake,
   totalOdds,
   potentialWin,
+  onPlaceBet,
+  placing,
 }: {
   bets: BetSelection[];
   onRemoveBet: (id: string) => void;
@@ -96,10 +155,11 @@ function SlipContent({
   setStake: (v: string) => void;
   totalOdds: number;
   potentialWin: number;
+  onPlaceBet: () => void;
+  placing: boolean;
 }) {
   return (
     <>
-      {/* Bet items */}
       {bets.map((bet) => (
         <div key={bet.id} className="flex items-start justify-between bg-secondary rounded-lg p-3">
           <div className="flex-1 min-w-0">
@@ -116,7 +176,6 @@ function SlipContent({
         </div>
       ))}
 
-      {/* Stake input */}
       <div className="pt-2 border-t border-border space-y-3">
         <div>
           <label className="text-xs text-muted-foreground mb-1 block">Yatırım (₺)</label>
@@ -130,7 +189,6 @@ function SlipContent({
           />
         </div>
 
-        {/* Quick stakes */}
         <div className="flex gap-2">
           {[10, 25, 50, 100].map((amount) => (
             <button
@@ -143,7 +201,6 @@ function SlipContent({
           ))}
         </div>
 
-        {/* Summary */}
         <div className="space-y-1.5">
           <div className="flex justify-between text-sm">
             <span className="text-muted-foreground">Toplam Oran</span>
@@ -155,9 +212,19 @@ function SlipContent({
           </div>
         </div>
 
-        {/* Place bet button */}
-        <button className="w-full btn-primary !py-3 text-sm font-bold">
-          Bahis Yap
+        <button
+          onClick={onPlaceBet}
+          disabled={placing}
+          className="w-full btn-primary !py-3 text-sm font-bold disabled:opacity-50 flex items-center justify-center gap-2"
+        >
+          {placing ? (
+            <>
+              <Loader2 className="h-4 w-4 animate-spin" />
+              İşleniyor...
+            </>
+          ) : (
+            "Bahis Yap"
+          )}
         </button>
       </div>
     </>
