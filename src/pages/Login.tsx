@@ -9,7 +9,7 @@ import { LogIn } from "lucide-react";
 import bluebetLogo from "@/assets/bluebet-logo-new.png";
 
 const Login = () => {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -18,10 +18,11 @@ const Login = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    const fakeEmail = `${username.trim().toLowerCase()}@bluebet.local`;
+    const { error } = await supabase.auth.signInWithPassword({ email: fakeEmail, password });
     setLoading(false);
     if (error) {
-      toast({ title: "Giriş Hatası", description: error.message, variant: "destructive" });
+      toast({ title: "Giriş Hatası", description: "Kullanıcı adı veya şifre hatalı.", variant: "destructive" });
     } else {
       toast({ title: "Başarılı", description: "Giriş yapıldı!" });
       navigate("/");
@@ -42,12 +43,11 @@ const Login = () => {
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">E-posta</label>
+              <label className="text-sm font-medium text-foreground">Kullanıcı Adı</label>
               <Input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="ornek@email.com"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="Kullanıcı adınız"
                 required
               />
             </div>

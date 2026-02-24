@@ -9,30 +9,34 @@ import { UserPlus } from "lucide-react";
 import bluebetLogo from "@/assets/bluebet-logo-new.png";
 
 const Register = () => {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
-  const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (username.trim().length < 3) {
+      toast({ title: "Hata", description: "Kullanıcı adı en az 3 karakter olmalı.", variant: "destructive" });
+      return;
+    }
     setLoading(true);
+    // Use username as a fake email for auth (username@bluebet.local)
+    const fakeEmail = `${username.trim().toLowerCase()}@bluebet.local`;
     const { error } = await supabase.auth.signUp({
-      email,
+      email: fakeEmail,
       password,
       options: {
-        data: { display_name: displayName },
-        emailRedirectTo: window.location.origin,
+        data: { display_name: username.trim() },
       },
     });
     setLoading(false);
     if (error) {
       toast({ title: "Kayıt Hatası", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Başarılı", description: "Kayıt oluşturuldu! E-postanızı kontrol edin." });
-      navigate("/giris");
+      toast({ title: "Başarılı", description: "Hesap oluşturuldu!" });
+      navigate("/");
     }
   };
 
@@ -52,19 +56,11 @@ const Register = () => {
             <div className="space-y-2">
               <label className="text-sm font-medium text-foreground">Kullanıcı Adı</label>
               <Input
-                value={displayName}
-                onChange={(e) => setDisplayName(e.target.value)}
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 placeholder="Kullanıcı adınız"
-                required
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium text-foreground">E-posta</label>
-              <Input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="ornek@email.com"
+                minLength={3}
+                maxLength={30}
                 required
               />
             </div>
