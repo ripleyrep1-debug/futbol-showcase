@@ -163,6 +163,43 @@ const Settings = () => {
           </CardContent>
         </Card>
 
+        {/* Roulette Settings */}
+        <Card className="border-border">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              🎡 Rulet Ayarları
+            </CardTitle>
+            <CardDescription>Rulet oyunu bahis limitlerini ve kasa avantajını ayarlayın</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium text-foreground">Rulet Aktif</p>
+                <p className="text-sm text-muted-foreground">Oyunu aç/kapat</p>
+              </div>
+              <Switch
+                checked={values.roulette_enabled !== "false"}
+                onCheckedChange={() => update("roulette_enabled", values.roulette_enabled === "false" ? "true" : "false")}
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Min Bahis (₺)</label>
+                <Input type="number" value={values.roulette_min_bet ?? "10"} onChange={(e) => update("roulette_min_bet", e.target.value)} />
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Max Bahis (₺)</label>
+                <Input type="number" value={values.roulette_max_bet ?? "10000"} onChange={(e) => update("roulette_max_bet", e.target.value)} />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Kasa Avantajı (%)</label>
+              <Input type="number" value={values.roulette_house_edge ?? "65"} onChange={(e) => update("roulette_house_edge", e.target.value)} />
+              <p className="text-xs text-muted-foreground">Örn: 65 = kasa %65 ihtimalle kazanır</p>
+            </div>
+          </CardContent>
+        </Card>
+
         {/* Commission & Accumulator */}
         <Card className="border-border">
           <CardHeader>
