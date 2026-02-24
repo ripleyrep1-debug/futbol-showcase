@@ -1,5 +1,5 @@
-import { useState, useEffect, useMemo } from "react";
-import { Clock, Zap, ChevronDown, ChevronUp, Trophy, Star, Loader2, AlertCircle, RefreshCw } from "lucide-react";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { Clock, Zap, ChevronDown, ChevronUp, Trophy, Star, Loader2, AlertCircle, RefreshCw, Search, X } from "lucide-react";
 import {
   fetchTodaysFixtures,
   fetchOddsByDate,
@@ -372,6 +372,9 @@ const BettingOdds = ({ onAddBet, selectedBets }: BettingOddsProps) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [allMatches, setAllMatches] = useState<ParsedMatch[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const loadData = async () => {
     setLoading(true);
@@ -397,14 +400,34 @@ const BettingOdds = ({ onAddBet, selectedBets }: BettingOddsProps) => {
     return () => clearInterval(interval);
   }, []);
 
+  useEffect(() => {
+    if (searchOpen && searchInputRef.current) {
+      searchInputRef.current.focus();
+    }
+  }, [searchOpen]);
+
   const filteredMatches = useMemo(() => {
     let filtered = allMatches;
-    if (activeFilter === "live") filtered = allMatches.filter((m) => m.isLive);
-    else if (activeFilter === "upcoming") filtered = allMatches.filter((m) => !m.isLive && m.allBets.length > 0);
-    else if (activeFilter === "popular") filtered = [...allMatches].sort((a, b) => b.allBets.length - a.allBets.length);
-    if (activeFilter !== "all") filtered = filtered.filter((m) => m.allBets.length > 0);
+
+    // Apply search filter
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      filtered = filtered.filter(
+        (m) =>
+          m.homeTeam.toLowerCase().includes(q) ||
+          m.awayTeam.toLowerCase().includes(q) ||
+          m.league.toLowerCase().includes(q)
+      );
+    } else {
+      // Apply category filter only when not searching
+      if (activeFilter === "live") filtered = allMatches.filter((m) => m.isLive);
+      else if (activeFilter === "upcoming") filtered = allMatches.filter((m) => !m.isLive && m.allBets.length > 0);
+      else if (activeFilter === "popular") filtered = [...allMatches].sort((a, b) => b.allBets.length - a.allBets.length);
+      if (activeFilter !== "all") filtered = filtered.filter((m) => m.allBets.length > 0);
+    }
+
     return filtered.slice(0, 50);
-  }, [allMatches, activeFilter]);
+  }, [allMatches, activeFilter, searchQuery]);
 
   const matchesWithOdds = allMatches.filter((m) => m.allBets.length > 0).length;
   const liveCount = allMatches.filter((m) => m.isLive).length;
@@ -437,7 +460,35 @@ const BettingOdds = ({ onAddBet, selectedBets }: BettingOddsProps) => {
   return (
     <section id="odds" className="py-4 sm:py-8">
       <div className="container mx-auto px-2 sm:px-4">
-        {/* Header */}
+        {/* Search Bar */}
+        <div className="mb-3">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Maçını bul... (takım veya lig adı)"
+              className="w-full bg-secondary border border-border rounded-xl pl-10 pr-10 py-2.5 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary transition-all"
+            />
+            {searchQuery && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            )}
+          </div>
+          {searchQuery.trim() && (
+            <p className="text-[10px] text-muted-foreground mt-1.5 ml-1">
+              "{searchQuery}" için {filteredMatches.length} sonuç bulundu
+            </p>
+          )}
+        </div>
+
+        {/* Filters */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <div>
             <h2 className="section-title flex items-center gap-2">
@@ -457,9 +508,9 @@ const BettingOdds = ({ onAddBet, selectedBets }: BettingOddsProps) => {
             ].map(({ key, label, icon: Icon }) => (
               <button
                 key={key}
-                onClick={() => setActiveFilter(key)}
+                onClick={() => { setActiveFilter(key); setSearchQuery(""); }}
                 className={`flex items-center gap-1 px-2 sm:px-3 py-1.5 rounded-lg text-[11px] sm:text-xs font-medium transition-all ${
-                  activeFilter === key
+                  activeFilter === key && !searchQuery
                     ? "bg-primary text-primary-foreground shadow-lg"
                     : "bg-secondary text-muted-foreground hover:text-foreground"
                 }`}
@@ -477,7 +528,20 @@ const BettingOdds = ({ onAddBet, selectedBets }: BettingOddsProps) => {
         {/* Matches */}
         {filteredMatches.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
-            <p className="text-sm">Bu kategoride maç bulunamadı.</p>
+            <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
+            <p className="text-sm">
+              {searchQuery.trim()
+                ? `"${searchQuery}" ile eşleşen maç bulunamadı.`
+                : "Bu kategoride maç bulunamadı."}
+            </p>
+            {searchQuery.trim() && (
+              <button
+                onClick={() => setSearchQuery("")}
+                className="mt-2 text-xs text-primary hover:underline"
+              >
+                Aramayı temizle
+              </button>
+            )}
           </div>
         ) : (
           <div className="space-y-2">
