@@ -449,8 +449,8 @@ const BettingOdds = ({ onAddBet, selectedBets }: BettingOddsProps) => {
       // Apply category filter only when not searching
       if (activeFilter === "live") filtered = allMatches.filter((m) => m.isLive);
       else if (activeFilter === "upcoming") filtered = allMatches.filter((m) => !m.isLive && m.allBets.length > 0);
-      else if (activeFilter === "popular") filtered = [...allMatches].sort((a, b) => b.allBets.length - a.allBets.length);
-      if (activeFilter !== "all") filtered = filtered.filter((m) => m.allBets.length > 0);
+      else if (activeFilter === "popular") filtered = [...allMatches].sort((a, b) => b.allBets.length - a.allBets.length).filter((m) => m.allBets.length > 0);
+      else if (activeFilter === "all") { /* show all */ }
     }
 
     // Always sort Turkish matches to the top
