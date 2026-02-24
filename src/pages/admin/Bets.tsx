@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -181,8 +181,8 @@ const Bets = () => {
                       const isExpanded = expandedBetId === bet.id;
                       const stats = getSelectionStats(selections);
                       return (
-                        <>
-                          <TableRow key={bet.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setExpandedBetId(isExpanded ? null : bet.id)}>
+                        <React.Fragment key={bet.id}>
+                          <TableRow className="cursor-pointer hover:bg-muted/50" onClick={() => setExpandedBetId(isExpanded ? null : bet.id)}>
                             <TableCell className="w-8">
                               {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
                             </TableCell>
@@ -278,7 +278,7 @@ const Bets = () => {
                               </TableCell>
                             </TableRow>
                           )}
-                        </>
+                        </React.Fragment>
                       );
                     })
                   )}

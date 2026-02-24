@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -121,8 +121,8 @@ const BetHistory = () => {
                       const selections = Array.isArray(bet.selections) ? bet.selections : [];
                       const isExpanded = expandedId === bet.id;
                       return (
-                        <>
-                          <TableRow key={bet.id} className="cursor-pointer hover:bg-muted/50" onClick={() => setExpandedId(isExpanded ? null : bet.id)}>
+                        <React.Fragment key={bet.id}>
+                          <TableRow className="cursor-pointer hover:bg-muted/50" onClick={() => setExpandedId(isExpanded ? null : bet.id)}>
                             <TableCell>{isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}</TableCell>
                             <TableCell className="font-medium">{bet.display_name}</TableCell>
                             <TableCell>₺{Number(bet.stake).toLocaleString("tr-TR")}</TableCell>
@@ -160,7 +160,7 @@ const BetHistory = () => {
                               </TableCell>
                             </TableRow>
                           )}
-                        </>
+                        </React.Fragment>
                       );
                     })
                   )}
