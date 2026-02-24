@@ -1,8 +1,11 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import Header from "@/components/Header";
 import BottomNav from "@/components/BottomNav";
+import DepositModal from "@/components/DepositModal";
+import AuthModal from "@/components/AuthModal";
 import { Badge } from "@/components/ui/badge";
 import { Receipt, Loader2, CheckCircle, XCircle, Clock } from "lucide-react";
 import { Navigate } from "react-router-dom";
@@ -16,6 +19,9 @@ const statusMap: Record<string, { label: string; variant: "default" | "destructi
 
 const MyBets = () => {
   const { user, loading: authLoading } = useAuth();
+  const [depositOpen, setDepositOpen] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [authTab, setAuthTab] = useState<"login" | "register">("login");
 
   const { data: bets, isLoading } = useQuery({
     queryKey: ["my-bets", user?.id],
@@ -112,7 +118,12 @@ const MyBets = () => {
           )}
         </div>
       </main>
-      <BottomNav />
+      <BottomNav
+        onOpenDeposit={() => setDepositOpen(true)}
+        onOpenAuth={(tab) => { setAuthTab(tab); setAuthOpen(true); }}
+      />
+      <DepositModal open={depositOpen} onOpenChange={setDepositOpen} />
+      <AuthModal open={authOpen} onOpenChange={setAuthOpen} defaultTab={authTab} />
     </div>
   );
 };
