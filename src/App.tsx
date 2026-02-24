@@ -25,7 +25,7 @@ import BetHistory from "./pages/admin/BetHistory";
 import BetTypeSettings from "./pages/admin/BetTypeSettings";
 import Support from "./pages/admin/Support";
 import LiveSupportChat from "./components/LiveSupportChat";
-
+import ScrollToTop from "./components/ScrollToTop";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -35,6 +35,7 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <AuthProvider>
+          <ScrollToTop />
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/bahislerim" element={<MyBets />} />
