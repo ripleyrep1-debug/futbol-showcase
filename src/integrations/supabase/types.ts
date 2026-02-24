@@ -282,7 +282,42 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      user_payment_requests_safe: {
+        Row: {
+          account_holder: string | null
+          amount: number | null
+          created_at: string | null
+          iban_masked: string | null
+          id: string | null
+          processed_at: string | null
+          status: string | null
+          type: string | null
+          user_id: string | null
+        }
+        Insert: {
+          account_holder?: string | null
+          amount?: number | null
+          created_at?: string | null
+          iban_masked?: never
+          id?: string | null
+          processed_at?: string | null
+          status?: string | null
+          type?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          account_holder?: string | null
+          amount?: number | null
+          created_at?: string | null
+          iban_masked?: never
+          id?: string | null
+          processed_at?: string | null
+          status?: string | null
+          type?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       has_role: {
