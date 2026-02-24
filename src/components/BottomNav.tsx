@@ -2,7 +2,12 @@ import { Trophy, Wallet, Receipt, Gamepad2, LogIn, UserPlus } from "lucide-react
 import { Link } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 
-const BottomNav = () => {
+interface BottomNavProps {
+  onOpenDeposit?: () => void;
+  onOpenAuth?: (tab: "login" | "register") => void;
+}
+
+const BottomNav = ({ onOpenDeposit, onOpenAuth }: BottomNavProps) => {
   const { user } = useAuth();
 
   return (
@@ -10,13 +15,13 @@ const BottomNav = () => {
       <div className="flex items-stretch">
         {user ? (
           <>
-            <Link
-              to="/"
+            <a
+              href="#odds"
               className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-muted-foreground hover:text-primary transition-colors"
             >
               <Gamepad2 className="h-5 w-5" />
               <span className="text-[10px] font-medium">Bahisler</span>
-            </Link>
+            </a>
             <Link
               to="/bahislerim"
               className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-muted-foreground hover:text-primary transition-colors"
@@ -34,13 +39,13 @@ const BottomNav = () => {
               </div>
               <span className="text-[10px] font-bold text-primary">Canlı</span>
             </a>
-            <Link
-              to="/"
+            <button
+              onClick={onOpenDeposit}
               className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-muted-foreground hover:text-primary transition-colors"
             >
               <Wallet className="h-5 w-5" />
               <span className="text-[10px] font-medium">Bakiye</span>
-            </Link>
+            </button>
             <a
               href="#standings"
               className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-muted-foreground hover:text-primary transition-colors"
@@ -51,20 +56,20 @@ const BottomNav = () => {
           </>
         ) : (
           <>
-            <a
-              href="#"
+            <button
+              onClick={() => onOpenAuth?.("login")}
               className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-muted-foreground hover:text-primary transition-colors"
             >
               <LogIn className="h-5 w-5" />
               <span className="text-[10px] font-medium">Giriş</span>
-            </a>
-            <a
-              href="#"
+            </button>
+            <button
+              onClick={() => onOpenAuth?.("register")}
               className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-muted-foreground hover:text-primary transition-colors"
             >
               <UserPlus className="h-5 w-5" />
               <span className="text-[10px] font-medium">Kayıt</span>
-            </a>
+            </button>
             <a
               href="#odds"
               className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-primary"

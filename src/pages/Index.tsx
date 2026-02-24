@@ -10,13 +10,17 @@ import Footer from "@/components/Footer";
 import LeagueSidebar from "@/components/LeagueSidebar";
 import BottomNav from "@/components/BottomNav";
 import AnnouncementBanner from "@/components/AnnouncementBanner";
+import DepositModal from "@/components/DepositModal";
+import AuthModal from "@/components/AuthModal";
 
 const Index = () => {
   const [bets, setBets] = useState<BetSelection[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedLeague, setSelectedLeague] = useState<string>("all");
+  const [depositOpen, setDepositOpen] = useState(false);
+  const [authOpen, setAuthOpen] = useState(false);
+  const [authTab, setAuthTab] = useState<"login" | "register">("login");
 
-  // Fetch site settings for maintenance & announcement
   const { data: siteSettings } = useQuery({
     queryKey: ["site-settings"],
     queryFn: async () => {
@@ -48,6 +52,11 @@ const Index = () => {
 
   const handleClearAll = () => setBets([]);
 
+  const handleOpenAuth = (tab: "login" | "register") => {
+    setAuthTab(tab);
+    setAuthOpen(true);
+  };
+
   return (
     <div className="min-h-screen flex flex-col">
       <AnnouncementBanner announcement={announcement} maintenanceMode={maintenanceMode} />
@@ -75,7 +84,9 @@ const Index = () => {
       {!maintenanceMode && (
         <BetSlip bets={bets} onRemoveBet={handleRemoveBet} onClearAll={handleClearAll} />
       )}
-      <BottomNav />
+      <BottomNav onOpenDeposit={() => setDepositOpen(true)} onOpenAuth={handleOpenAuth} />
+      <DepositModal open={depositOpen} onOpenChange={setDepositOpen} />
+      <AuthModal open={authOpen} onOpenChange={setAuthOpen} defaultTab={authTab} />
     </div>
   );
 };
