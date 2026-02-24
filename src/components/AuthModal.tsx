@@ -29,12 +29,21 @@ const AuthModal = ({ open, onOpenChange, defaultTab = "login" }: AuthModalProps)
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (tab === "register" && username.trim().length < 3) {
+    const trimmed = username.trim().toLowerCase();
+
+    if (tab === "register" && trimmed.length < 3) {
       toast({ title: "Hata", description: "Kullanıcı adı en az 3 karakter olmalı.", variant: "destructive" });
       return;
     }
+
+    // Only allow alphanumeric and underscores
+    if (tab === "register" && !/^[a-zA-Z0-9_]+$/.test(trimmed)) {
+      toast({ title: "Hata", description: "Kullanıcı adı sadece harf, rakam ve alt çizgi içerebilir.", variant: "destructive" });
+      return;
+    }
+
     setLoading(true);
-    const fakeEmail = `${username.trim().toLowerCase()}@users.bluebet.app`;
+    const fakeEmail = `${trimmed}@users.bluebet.app`;
 
     if (tab === "login") {
       const { error } = await supabase.auth.signInWithPassword({ email: fakeEmail, password });
@@ -46,14 +55,29 @@ const AuthModal = ({ open, onOpenChange, defaultTab = "login" }: AuthModalProps)
         onOpenChange(false);
       }
     } else {
-      const { error } = await supabase.auth.signUp({
+      // Check if username already exists
+      const { data: isTaken } = await supabase.rpc("is_username_taken", { p_username: trimmed });
+
+      if (isTaken) {
+        setLoading(false);
+        toast({ title: "Kayıt Hatası", description: "Bu kullanıcı adı zaten kullanılıyor. Lütfen farklı bir isim deneyin.", variant: "destructive" });
+        return;
+      }
+
+      const { data, error } = await supabase.auth.signUp({
         email: fakeEmail,
         password,
         options: { data: { display_name: username.trim() } },
       });
       setLoading(false);
+
+      // Supabase returns a user with fake session if email already exists (no email confirm)
+      // Check if user was actually created
       if (error) {
         toast({ title: "Kayıt Hatası", description: error.message, variant: "destructive" });
+      } else if (data.user && data.user.identities && data.user.identities.length === 0) {
+        // Empty identities = user already existed
+        toast({ title: "Kayıt Hatası", description: "Bu kullanıcı adı zaten kullanılıyor.", variant: "destructive" });
       } else {
         toast({ title: "Başarılı", description: "Hesap oluşturuldu!" });
         onOpenChange(false);

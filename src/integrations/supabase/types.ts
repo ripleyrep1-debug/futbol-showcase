@@ -327,6 +327,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_username_taken: { Args: { p_username: string }; Returns: boolean }
       place_bet: {
         Args: {
           p_potential_win: number
