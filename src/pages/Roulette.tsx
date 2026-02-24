@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useCallback } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -6,7 +6,7 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { Button } from "@/components/ui/button";
 import { toast } from "@/hooks/use-toast";
-import { ArrowLeft, Volume2, VolumeX, RotateCcw, Trash2 } from "lucide-react";
+import { ArrowLeft, Volume2, VolumeX, RotateCcw, Trash2, Info } from "lucide-react";
 import { Link } from "react-router-dom";
 
 // ─── Types ───
@@ -16,22 +16,16 @@ type BetType =
   | { kind: "black" }
   | { kind: "even" }
   | { kind: "odd" }
-  | { kind: "low" }   // 1-18
-  | { kind: "high" }  // 19-36
+  | { kind: "low" }
+  | { kind: "high" }
   | { kind: "dozen"; dozen: 1 | 2 | 3 }
   | { kind: "column"; column: 1 | 2 | 3 };
 
-interface PlacedBet {
-  type: BetType;
-  amount: number;
-  label: string;
-}
+interface PlacedBet { type: BetType; amount: number; label: string; }
 
 // ─── Roulette Data ───
 const RED_NUMBERS = [1,3,5,7,9,12,14,16,18,19,21,23,25,27,30,32,34,36];
-const BLACK_NUMBERS = [2,4,6,8,10,11,13,15,17,20,22,24,26,28,29,31,33,35];
 
-// European wheel order
 const WHEEL_ORDER = [0,32,15,19,4,21,2,25,17,34,6,27,13,36,11,30,8,23,10,5,24,16,33,1,20,14,31,9,22,18,29,7,28,12,35,3,26];
 
 function getColor(n: number): "green" | "red" | "black" {
@@ -51,7 +45,7 @@ function isWin(bet: BetType, result: number): boolean {
   switch (bet.kind) {
     case "straight": return bet.number === result;
     case "red": return RED_NUMBERS.includes(result);
-    case "black": return BLACK_NUMBERS.includes(result);
+    case "black": return result > 0 && !RED_NUMBERS.includes(result);
     case "even": return result > 0 && result % 2 === 0;
     case "odd": return result > 0 && result % 2 === 1;
     case "low": return result >= 1 && result <= 18;
@@ -65,7 +59,7 @@ function isWin(bet: BetType, result: number): boolean {
   }
 }
 
-// ─── Sound Engine ───
+// ─── Sound ───
 class SoundEngine {
   private ctx: AudioContext | null = null;
   public muted = false;
@@ -73,11 +67,8 @@ class SoundEngine {
   play(type: "chip" | "spin" | "win" | "lose" | "ball") {
     if (this.muted) return;
     try {
-      const ctx = this.getCtx();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain); gain.connect(ctx.destination);
-      const now = ctx.currentTime;
+      const ctx = this.getCtx(); const osc = ctx.createOscillator(); const gain = ctx.createGain();
+      osc.connect(gain); gain.connect(ctx.destination); const now = ctx.currentTime;
       switch (type) {
         case "chip":
           osc.type = "triangle"; osc.frequency.setValueAtTime(2000, now); osc.frequency.exponentialRampToValueAtTime(3000, now + 0.05);
@@ -109,10 +100,9 @@ class SoundEngine {
 }
 const sfx = new SoundEngine();
 
-// ─── Chip Selector ───
 const CHIPS = [10, 25, 50, 100, 250, 500, 1000];
 
-// ─── Main Component ───
+// ─── Main ───
 const Roulette = () => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
@@ -126,6 +116,7 @@ const Roulette = () => {
   const [muted, setMuted] = useState(false);
   const [wheelRotation, setWheelRotation] = useState(0);
   const [history, setHistory] = useState<number[]>([]);
+  const [showRules, setShowRules] = useState(false);
 
   const { data: profile } = useQuery({
     queryKey: ["user-profile-roulette", user?.id],
@@ -154,7 +145,6 @@ const Roulette = () => {
   const rouletteEnabled = settings?.roulette_enabled !== "false";
 
   const toggleMute = () => { sfx.muted = !muted; setMuted(!muted); };
-
   const invalidateProfiles = () => {
     queryClient.invalidateQueries({ queryKey: ["user-profile-roulette"] });
     queryClient.invalidateQueries({ queryKey: ["user-profile"] });
@@ -162,13 +152,17 @@ const Roulette = () => {
 
   const totalBetAmount = bets.reduce((s, b) => s + b.amount, 0);
 
+  const getBetAmount = (type: BetType): number => {
+    const found = bets.find(b => JSON.stringify(b.type) === JSON.stringify(type));
+    return found?.amount ?? 0;
+  };
+
   const placeBet = (type: BetType, label: string) => {
     if (spinning) return;
     const newTotal = totalBetAmount + selectedChip;
     if (newTotal > balance) { toast({ title: "Yetersiz bakiye", variant: "destructive" }); return; }
     if (newTotal > maxBet) { toast({ title: `Maksimum bahis ₺${maxBet}`, variant: "destructive" }); return; }
     sfx.play("chip");
-    // Merge with existing bet of same type
     const existing = bets.findIndex(b => JSON.stringify(b.type) === JSON.stringify(type));
     if (existing >= 0) {
       const updated = [...bets];
@@ -181,54 +175,34 @@ const Roulette = () => {
 
   const clearBets = () => { if (!spinning) { setBets([]); setShowResult(false); setResult(null); } };
 
-  // Biased result selection — house edge
   const pickResult = useCallback((): number => {
     const houseWins = Math.random() * 100 < houseEdge;
-
     if (houseWins && bets.length > 0) {
-      // Find numbers that lose ALL bets
       const losingNumbers: number[] = [];
       for (let n = 0; n <= 36; n++) {
-        const allLose = bets.every(b => !isWin(b.type, n));
-        if (allLose) losingNumbers.push(n);
+        if (bets.every(b => !isWin(b.type, n))) losingNumbers.push(n);
       }
-      if (losingNumbers.length > 0) {
-        return losingNumbers[Math.floor(Math.random() * losingNumbers.length)];
-      }
-      // If no number loses all bets, pick the one with minimal payout
-      let minPay = Infinity;
-      let minN = 0;
+      if (losingNumbers.length > 0) return losingNumbers[Math.floor(Math.random() * losingNumbers.length)];
+      let minPay = Infinity; let minN = 0;
       for (let n = 0; n <= 36; n++) {
         const pay = bets.reduce((s, b) => s + (isWin(b.type, n) ? b.amount * getPayout(b.type) : -b.amount), 0);
         if (pay < minPay) { minPay = pay; minN = n; }
       }
       return minN;
     }
-
-    // Let player win — pick a number that wins at least one bet
     if (bets.length > 0) {
       const winningNumbers: number[] = [];
-      for (let n = 0; n <= 36; n++) {
-        if (bets.some(b => isWin(b.type, n))) winningNumbers.push(n);
-      }
-      if (winningNumbers.length > 0) {
-        return winningNumbers[Math.floor(Math.random() * winningNumbers.length)];
-      }
+      for (let n = 0; n <= 36; n++) { if (bets.some(b => isWin(b.type, n))) winningNumbers.push(n); }
+      if (winningNumbers.length > 0) return winningNumbers[Math.floor(Math.random() * winningNumbers.length)];
     }
-
     return Math.floor(Math.random() * 37);
   }, [bets, houseEdge]);
 
   const spin = async () => {
     if (!user || bets.length === 0 || spinning) return;
     if (totalBetAmount < minBet) { toast({ title: `Minimum bahis ₺${minBet}`, variant: "destructive" }); return; }
+    setSpinning(true); setShowResult(false); setResult(null); setWinAmount(0);
 
-    setSpinning(true);
-    setShowResult(false);
-    setResult(null);
-    setWinAmount(0);
-
-    // Deduct balance
     const { data: fp } = await supabase.from("profiles").select("balance").eq("id", user.id).maybeSingle();
     const freshBalance = fp?.balance ?? 0;
     if (totalBetAmount > freshBalance) { toast({ title: "Yetersiz bakiye", variant: "destructive" }); setSpinning(false); return; }
@@ -236,7 +210,6 @@ const Roulette = () => {
     await supabase.from("profiles").update({ balance: freshBalance - totalBetAmount }).eq("id", user.id);
     await supabase.from("transactions").insert({ user_id: user.id, amount: -totalBetAmount, type: "roulette", description: "Rulet bahis" });
     invalidateProfiles();
-
     sfx.play("spin");
 
     const winningNumber = pickResult();
@@ -245,25 +218,16 @@ const Roulette = () => {
     const targetAngle = 360 - (slotIdx * degreesPerSlot) - degreesPerSlot / 2;
     const fullSpins = 5 + Math.floor(Math.random() * 3);
     const finalRotation = wheelRotation + fullSpins * 360 + targetAngle - (wheelRotation % 360);
-
     setWheelRotation(finalRotation);
 
-    // Wait for spin animation
     await new Promise(r => setTimeout(r, 4000));
     sfx.play("ball");
     await new Promise(r => setTimeout(r, 500));
 
-    // Calculate winnings
     let totalWin = 0;
-    bets.forEach(b => {
-      if (isWin(b.type, winningNumber)) {
-        totalWin += b.amount + b.amount * getPayout(b.type);
-      }
-    });
+    bets.forEach(b => { if (isWin(b.type, winningNumber)) totalWin += b.amount + b.amount * getPayout(b.type); });
 
-    setResult(winningNumber);
-    setWinAmount(totalWin);
-    setShowResult(true);
+    setResult(winningNumber); setWinAmount(totalWin); setShowResult(true);
     setHistory(prev => [winningNumber, ...prev.slice(0, 19)]);
 
     if (totalWin > 0) {
@@ -271,23 +235,22 @@ const Roulette = () => {
       const { data: fp2 } = await supabase.from("profiles").select("balance").eq("id", user.id).maybeSingle();
       await supabase.from("profiles").update({ balance: (fp2?.balance ?? 0) + totalWin }).eq("id", user.id);
       await supabase.from("transactions").insert({ user_id: user.id, amount: totalWin, type: "roulette_win", description: `Rulet kazanç - ${winningNumber}` });
-    } else {
-      sfx.play("lose");
-    }
+    } else { sfx.play("lose"); }
 
     invalidateProfiles();
     setSpinning(false);
   };
 
-  const numColor = (n: number) => {
-    if (n === 0) return "bg-green-600";
-    return RED_NUMBERS.includes(n) ? "bg-red-600" : "bg-gray-900";
-  };
+  const numBg = (n: number) => n === 0 ? "bg-green-600" : RED_NUMBERS.includes(n) ? "bg-red-600" : "bg-gray-900";
 
-  const numTextColor = (n: number) => {
-    if (n === 0) return "text-green-400";
-    return RED_NUMBERS.includes(n) ? "text-red-400" : "text-gray-400";
-  };
+  // Chip overlay on bet cells
+  const ChipOverlay = ({ amount }: { amount: number }) => amount > 0 ? (
+    <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+      <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-accent border-2 border-accent-foreground flex items-center justify-center shadow-lg">
+        <span className="text-[7px] sm:text-[8px] font-black text-accent-foreground">{amount >= 1000 ? `${(amount/1000).toFixed(0)}k` : amount}</span>
+      </div>
+    </div>
+  ) : null;
 
   if (!user) {
     return (
@@ -295,7 +258,7 @@ const Roulette = () => {
         <Header />
         <div className="flex items-center justify-center min-h-[60vh]">
           <div className="text-center space-y-4 animate-fade-in">
-            <div className="text-6xl mb-4">🎰</div>
+            <div className="text-6xl mb-4">🎡</div>
             <h2 className="text-2xl font-bold text-foreground">Rulet</h2>
             <p className="text-muted-foreground">Oynamak için giriş yapmalısınız.</p>
           </div>
@@ -322,42 +285,66 @@ const Roulette = () => {
     );
   }
 
-  // Grid layout: 3 rows x 12 columns for numbers 1-36
-  const gridRows = [
-    [3, 6, 9, 12, 15, 18, 21, 24, 27, 30, 33, 36],
-    [2, 5, 8, 11, 14, 17, 20, 23, 26, 29, 32, 35],
-    [1, 4, 7, 10, 13, 16, 19, 22, 25, 28, 31, 34],
+  // Mobile-friendly grid: 6 columns x 6 rows for numbers
+  const mobileGrid = [
+    [1, 2, 3, 4, 5, 6],
+    [7, 8, 9, 10, 11, 12],
+    [13, 14, 15, 16, 17, 18],
+    [19, 20, 21, 22, 23, 24],
+    [25, 26, 27, 28, 29, 30],
+    [31, 32, 33, 34, 35, 36],
   ];
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <Header />
-      <div className="flex-1 max-w-4xl mx-auto w-full px-3 sm:px-4 pt-4 pb-24 flex flex-col">
+      <div className="flex-1 max-w-lg mx-auto w-full px-2 sm:px-4 pt-3 pb-20 flex flex-col">
         {/* Top Bar */}
-        <div className="flex items-center gap-2 mb-3">
+        <div className="flex items-center gap-2 mb-2">
           <Link to="/" className="text-muted-foreground hover:text-foreground transition-colors p-1">
             <ArrowLeft className="h-5 w-5" />
           </Link>
-          <h1 className="text-lg font-bold text-foreground font-rajdhani">🎡 Rulet</h1>
-          <div className="ml-auto flex items-center gap-2">
+          <h1 className="text-base font-bold text-foreground font-rajdhani">🎡 Rulet</h1>
+          <div className="ml-auto flex items-center gap-1.5">
+            <button onClick={() => setShowRules(!showRules)} className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground transition-colors">
+              <Info className="h-4 w-4" />
+            </button>
             <button onClick={toggleMute} className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground transition-colors">
               {muted ? <VolumeX className="h-4 w-4" /> : <Volume2 className="h-4 w-4" />}
             </button>
-            <div className="bg-secondary px-3 py-1.5 rounded-xl border border-border">
-              <span className="text-xs text-muted-foreground">₺</span>
+            <div className="bg-secondary px-2.5 py-1 rounded-xl border border-border">
+              <span className="text-[10px] text-muted-foreground">₺</span>
               <span className="text-sm font-bold text-accent ml-0.5">{balance.toFixed(0)}</span>
             </div>
           </div>
         </div>
 
-        {/* Wheel */}
-        <div className="flex justify-center mb-4 relative">
-          <div className="relative w-48 h-48 sm:w-56 sm:h-56">
-            {/* Pointer */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 z-20 w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-t-[16px] border-t-accent drop-shadow-lg" />
-            {/* Wheel */}
+        {/* Rules Panel */}
+        {showRules && (
+          <div className="bg-card border border-border rounded-xl p-3 mb-2 animate-fade-in text-xs text-muted-foreground space-y-1.5">
+            <p className="font-bold text-foreground text-sm">📋 Oyun Kuralları</p>
+            <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+              <span>🎯 Direkt Sayı</span><span className="text-accent font-bold">35x ödeme</span>
+              <span>🔴 Kırmızı / ⚫ Siyah</span><span className="text-accent font-bold">2x ödeme</span>
+              <span>Tek / Çift</span><span className="text-accent font-bold">2x ödeme</span>
+              <span>1-18 / 19-36</span><span className="text-accent font-bold">2x ödeme</span>
+              <span>Düzine (1-12, 13-24, 25-36)</span><span className="text-accent font-bold">3x ödeme</span>
+              <span>Sütun</span><span className="text-accent font-bold">3x ödeme</span>
+            </div>
+            <div className="border-t border-border pt-1.5 mt-1.5 space-y-0.5">
+              <p>💰 Min bahis: <span className="text-foreground font-bold">₺{minBet}</span> • Max bahis: <span className="text-foreground font-bold">₺{maxBet}</span></p>
+              <p>🟢 0 tüm dış bahisleri kaybettirir</p>
+              <p>🎰 Birden fazla bahis aynı anda yapılabilir</p>
+            </div>
+          </div>
+        )}
+
+        {/* Wheel — compact */}
+        <div className="flex justify-center mb-2 relative">
+          <div className="relative w-36 h-36 sm:w-48 sm:h-48">
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-1 z-20 w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[12px] border-t-accent drop-shadow-lg" />
             <div
-              className="w-full h-full rounded-full border-4 border-accent/30 relative overflow-hidden shadow-[0_0_40px_hsl(var(--accent)/0.2)]"
+              className="w-full h-full rounded-full border-[3px] border-accent/30 relative overflow-hidden shadow-[0_0_30px_hsl(var(--accent)/0.15)]"
               style={{
                 transform: `rotate(${wheelRotation}deg)`,
                 transition: spinning ? "transform 4s cubic-bezier(0.17, 0.67, 0.12, 0.99)" : "none",
@@ -368,47 +355,34 @@ const Roulette = () => {
                 const color = getColor(num);
                 const bgColor = color === "green" ? "#16a34a" : color === "red" ? "#dc2626" : "#1a1a2e";
                 return (
-                  <div
-                    key={num}
-                    className="absolute w-full h-full flex items-start justify-center"
-                    style={{ transform: `rotate(${angle}deg)` }}
-                  >
-                    <div
-                      className="w-5 h-[48%] flex items-start justify-center pt-1 text-[7px] sm:text-[8px] font-bold text-white"
-                      style={{
-                        background: bgColor,
-                        clipPath: "polygon(35% 0%, 65% 0%, 55% 100%, 45% 100%)",
-                      }}
-                    >
+                  <div key={num} className="absolute w-full h-full flex items-start justify-center" style={{ transform: `rotate(${angle}deg)` }}>
+                    <div className="w-4 h-[48%] flex items-start justify-center pt-0.5 text-[6px] sm:text-[7px] font-bold text-white"
+                      style={{ background: bgColor, clipPath: "polygon(30% 0%, 70% 0%, 55% 100%, 45% 100%)" }}>
                       {num}
                     </div>
                   </div>
                 );
               })}
-              <div className="absolute inset-[30%] rounded-full bg-background border-2 border-border flex items-center justify-center">
+              <div className="absolute inset-[28%] rounded-full bg-background border-2 border-border flex items-center justify-center">
                 {showResult && result !== null ? (
-                  <span className={`text-lg sm:text-xl font-black ${result === 0 ? "text-green-400" : RED_NUMBERS.includes(result) ? "text-red-400" : "text-foreground"}`}>
-                    {result}
-                  </span>
+                  <span className={`text-base sm:text-lg font-black ${result === 0 ? "text-green-400" : RED_NUMBERS.includes(result) ? "text-red-400" : "text-foreground"}`}>{result}</span>
                 ) : (
-                  <span className="text-muted-foreground text-xs">RULET</span>
+                  <span className="text-muted-foreground text-[10px]">RULET</span>
                 )}
               </div>
             </div>
           </div>
         </div>
 
-        {/* Result Display */}
+        {/* Result */}
         {showResult && result !== null && (
-          <div className="text-center mb-3 animate-scale-in">
-            <div className="inline-flex items-center gap-2 bg-card border border-border rounded-xl px-4 py-2">
-              <div className={`w-8 h-8 rounded-full ${numColor(result)} flex items-center justify-center text-white font-bold text-sm`}>
-                {result}
-              </div>
+          <div className="text-center mb-2 animate-scale-in">
+            <div className="inline-flex items-center gap-2 bg-card border border-border rounded-xl px-3 py-1.5">
+              <div className={`w-7 h-7 rounded-full ${numBg(result)} flex items-center justify-center text-white font-bold text-xs`}>{result}</div>
               {winAmount > 0 ? (
-                <span className="text-accent font-bold animate-pulse">+₺{winAmount.toFixed(0)} Kazandınız! 🎉</span>
+                <span className="text-accent font-bold text-sm animate-pulse">+₺{winAmount.toFixed(0)} 🎉</span>
               ) : (
-                <span className="text-destructive font-bold">Kaybettiniz 😞</span>
+                <span className="text-destructive font-bold text-sm">Kaybettiniz 😞</span>
               )}
             </div>
           </div>
@@ -416,184 +390,159 @@ const Roulette = () => {
 
         {/* History */}
         {history.length > 0 && (
-          <div className="flex gap-1 justify-center mb-3 flex-wrap">
+          <div className="flex gap-1 justify-center mb-2 flex-wrap">
             {history.slice(0, 10).map((n, i) => (
-              <div key={i} className={`w-6 h-6 rounded-full ${numColor(n)} flex items-center justify-center text-white text-[9px] font-bold ${i === 0 ? "ring-2 ring-accent" : "opacity-60"}`}>
-                {n}
-              </div>
+              <div key={i} className={`w-5 h-5 rounded-full ${numBg(n)} flex items-center justify-center text-white text-[8px] font-bold ${i === 0 ? "ring-2 ring-accent" : "opacity-50"}`}>{n}</div>
             ))}
           </div>
         )}
 
-        {/* Betting Grid */}
-        <div className="bg-card border border-border rounded-xl p-2 sm:p-3 mb-3 overflow-x-auto">
-          <div className="min-w-[600px]">
-            {/* Zero */}
-            <div className="flex mb-1">
-              <button
-                onClick={() => placeBet({ kind: "straight", number: 0 }, "0")}
-                disabled={spinning}
-                className={`w-12 h-16 rounded-lg bg-green-700 hover:bg-green-600 text-white font-bold text-sm border border-green-500/50 transition-all ${
-                  bets.some(b => b.type.kind === "straight" && b.type.number === 0) ? "ring-2 ring-accent" : ""
-                } ${spinning ? "opacity-50 cursor-not-allowed" : "cursor-pointer active:scale-95"}`}
-              >
-                0
-              </button>
-            </div>
+        {/* Betting Table — Mobile Optimized */}
+        <div className="bg-card border border-border rounded-xl p-1.5 sm:p-2 mb-2">
+          {/* Zero */}
+          <div className="mb-1">
+            <button
+              onClick={() => placeBet({ kind: "straight", number: 0 }, "0")}
+              disabled={spinning}
+              className={`relative w-full h-8 rounded bg-green-700 hover:bg-green-600 text-white font-bold text-xs border border-green-500/30 transition-all
+                ${getBetAmount({ kind: "straight", number: 0 }) > 0 ? "ring-2 ring-accent" : ""}
+                ${spinning ? "opacity-50 cursor-not-allowed" : "active:scale-[0.98]"}`}
+            >
+              0
+              <ChipOverlay amount={getBetAmount({ kind: "straight", number: 0 })} />
+            </button>
+          </div>
 
-            {/* Number Grid */}
-            {gridRows.map((row, rIdx) => (
-              <div key={rIdx} className="flex gap-[2px] mb-[2px]">
-                {row.map(n => {
-                  const hasBet = bets.some(b => b.type.kind === "straight" && b.type.number === n);
-                  return (
-                    <button
-                      key={n}
-                      onClick={() => placeBet({ kind: "straight", number: n }, String(n))}
-                      disabled={spinning}
-                      className={`flex-1 h-10 rounded text-xs font-bold text-white transition-all border
-                        ${RED_NUMBERS.includes(n) ? "bg-red-700 hover:bg-red-600 border-red-500/30" : "bg-gray-800 hover:bg-gray-700 border-gray-600/30"}
-                        ${hasBet ? "ring-2 ring-accent scale-105" : ""}
-                        ${spinning ? "opacity-50 cursor-not-allowed" : "cursor-pointer active:scale-95"}
-                      `}
-                    >
-                      {n}
-                    </button>
-                  );
-                })}
-                {/* Column bet */}
+          {/* Number Grid — 6 cols fits mobile */}
+          <div className="grid grid-cols-6 gap-[2px] mb-1">
+            {mobileGrid.flat().map(n => {
+              const betAmt = getBetAmount({ kind: "straight", number: n });
+              return (
                 <button
-                  onClick={() => placeBet({ kind: "column", column: (3 - rIdx) as 1 | 2 | 3 }, `Sütun ${3 - rIdx}`)}
+                  key={n}
+                  onClick={() => placeBet({ kind: "straight", number: n }, String(n))}
                   disabled={spinning}
-                  className={`w-10 h-10 rounded text-[9px] font-bold bg-secondary hover:bg-secondary/80 text-foreground border border-border transition-all
-                    ${bets.some(b => b.type.kind === "column" && b.type.column === 3 - rIdx) ? "ring-2 ring-accent" : ""}
-                    ${spinning ? "opacity-50 cursor-not-allowed" : "cursor-pointer active:scale-95"}
+                  className={`relative h-9 sm:h-10 rounded text-[11px] sm:text-xs font-bold text-white transition-all border
+                    ${RED_NUMBERS.includes(n) ? "bg-red-700 hover:bg-red-600 border-red-500/20" : "bg-gray-800 hover:bg-gray-700 border-gray-600/20"}
+                    ${betAmt > 0 ? "ring-2 ring-accent" : ""}
+                    ${spinning ? "opacity-50 cursor-not-allowed" : "active:scale-[0.95]"}
                   `}
                 >
-                  2:1
+                  {n}
+                  <ChipOverlay amount={betAmt} />
                 </button>
-              </div>
-            ))}
+              );
+            })}
+          </div>
 
-            {/* Dozens */}
-            <div className="flex gap-[2px] mt-1 mb-1">
-              {([1, 2, 3] as const).map(d => (
-                <button
-                  key={d}
-                  onClick={() => placeBet({ kind: "dozen", dozen: d }, `${d}. Düzine`)}
-                  disabled={spinning}
-                  className={`flex-1 h-9 rounded text-xs font-bold bg-secondary hover:bg-secondary/80 text-foreground border border-border transition-all
-                    ${bets.some(b => b.type.kind === "dozen" && b.type.dozen === d) ? "ring-2 ring-accent" : ""}
-                    ${spinning ? "opacity-50 cursor-not-allowed" : "cursor-pointer active:scale-95"}
-                  `}
-                >
+          {/* Dozens */}
+          <div className="grid grid-cols-3 gap-[2px] mb-1">
+            {([1, 2, 3] as const).map(d => {
+              const betAmt = getBetAmount({ kind: "dozen", dozen: d });
+              return (
+                <button key={d} onClick={() => placeBet({ kind: "dozen", dozen: d }, `${d}. Düzine`)} disabled={spinning}
+                  className={`relative h-8 rounded text-[10px] sm:text-xs font-bold bg-secondary hover:bg-secondary/80 text-foreground border border-border transition-all
+                    ${betAmt > 0 ? "ring-2 ring-accent" : ""} ${spinning ? "opacity-50 cursor-not-allowed" : "active:scale-[0.97]"}`}>
                   {d === 1 ? "1-12" : d === 2 ? "13-24" : "25-36"}
+                  <ChipOverlay amount={betAmt} />
                 </button>
-              ))}
-            </div>
+              );
+            })}
+          </div>
 
-            {/* Outside bets */}
-            <div className="flex gap-[2px]">
-              {[
-                { type: { kind: "low" as const }, label: "1-18" },
-                { type: { kind: "even" as const }, label: "Çift" },
-                { type: { kind: "red" as const }, label: "🔴" },
-                { type: { kind: "black" as const }, label: "⚫" },
-                { type: { kind: "odd" as const }, label: "Tek" },
-                { type: { kind: "high" as const }, label: "19-36" },
-              ].map(({ type, label }) => (
-                <button
-                  key={label}
-                  onClick={() => placeBet(type, label)}
-                  disabled={spinning}
-                  className={`flex-1 h-9 rounded text-xs font-bold transition-all border
-                    ${type.kind === "red" ? "bg-red-700 hover:bg-red-600 text-white border-red-500/30" : type.kind === "black" ? "bg-gray-800 hover:bg-gray-700 text-white border-gray-600/30" : "bg-secondary hover:bg-secondary/80 text-foreground border-border"}
-                    ${bets.some(b => JSON.stringify(b.type) === JSON.stringify(type)) ? "ring-2 ring-accent" : ""}
-                    ${spinning ? "opacity-50 cursor-not-allowed" : "cursor-pointer active:scale-95"}
-                  `}
-                >
-                  {label}
+          {/* Columns */}
+          <div className="grid grid-cols-3 gap-[2px] mb-1">
+            {([1, 2, 3] as const).map(c => {
+              const betAmt = getBetAmount({ kind: "column", column: c });
+              return (
+                <button key={c} onClick={() => placeBet({ kind: "column", column: c }, `Sütun ${c}`)} disabled={spinning}
+                  className={`relative h-8 rounded text-[10px] sm:text-xs font-bold bg-secondary hover:bg-secondary/80 text-foreground border border-border transition-all
+                    ${betAmt > 0 ? "ring-2 ring-accent" : ""} ${spinning ? "opacity-50 cursor-not-allowed" : "active:scale-[0.97]"}`}>
+                  Sütun {c} (2:1)
+                  <ChipOverlay amount={betAmt} />
                 </button>
-              ))}
-            </div>
+              );
+            })}
+          </div>
+
+          {/* Outside Bets — 2 rows of 3 */}
+          <div className="grid grid-cols-3 gap-[2px]">
+            {[
+              { type: { kind: "red" as const }, label: "🔴 Kırmızı", cls: "bg-red-700 hover:bg-red-600 text-white border-red-500/20" },
+              { type: { kind: "black" as const }, label: "⚫ Siyah", cls: "bg-gray-800 hover:bg-gray-700 text-white border-gray-600/20" },
+              { type: { kind: "even" as const }, label: "Çift", cls: "bg-secondary hover:bg-secondary/80 text-foreground border-border" },
+              { type: { kind: "odd" as const }, label: "Tek", cls: "bg-secondary hover:bg-secondary/80 text-foreground border-border" },
+              { type: { kind: "low" as const }, label: "1-18", cls: "bg-secondary hover:bg-secondary/80 text-foreground border-border" },
+              { type: { kind: "high" as const }, label: "19-36", cls: "bg-secondary hover:bg-secondary/80 text-foreground border-border" },
+            ].map(({ type, label, cls }) => {
+              const betAmt = getBetAmount(type);
+              return (
+                <button key={label} onClick={() => placeBet(type, label)} disabled={spinning}
+                  className={`relative h-9 rounded text-[10px] sm:text-xs font-bold transition-all border ${cls}
+                    ${betAmt > 0 ? "ring-2 ring-accent" : ""} ${spinning ? "opacity-50 cursor-not-allowed" : "active:scale-[0.97]"}`}>
+                  {label}
+                  <ChipOverlay amount={betAmt} />
+                </button>
+              );
+            })}
           </div>
         </div>
 
         {/* Chip Selector */}
-        <div className="flex flex-wrap justify-center gap-2 mb-3">
+        <div className="flex justify-center gap-1.5 mb-2">
           {CHIPS.filter(c => c <= maxBet).map(chip => (
-            <button
-              key={chip}
-              onClick={() => { setSelectedChip(chip); sfx.play("chip"); }}
-              disabled={spinning}
-              className={`w-12 h-12 sm:w-14 sm:h-14 rounded-full border-[3px] font-bold text-[10px] sm:text-xs transition-all active:scale-90
+            <button key={chip} onClick={() => { setSelectedChip(chip); sfx.play("chip"); }} disabled={spinning}
+              className={`w-10 h-10 sm:w-12 sm:h-12 rounded-full border-2 font-bold text-[9px] sm:text-[10px] transition-all active:scale-90
                 ${selectedChip === chip
-                  ? "border-accent bg-accent/20 text-accent scale-110 shadow-[0_0_15px_hsl(var(--accent)/0.4)]"
+                  ? "border-accent bg-accent/20 text-accent scale-110 shadow-[0_0_12px_hsl(var(--accent)/0.4)]"
                   : chip > balance
                     ? "border-border bg-muted text-muted-foreground opacity-40 cursor-not-allowed"
-                    : "border-border bg-secondary text-foreground hover:border-accent/50 cursor-pointer hover:scale-105"
-                }
-              `}
-            >
-              ₺{chip}
+                    : "border-border bg-secondary text-foreground hover:border-accent/50 cursor-pointer"
+                }`}>
+              ₺{chip >= 1000 ? `${chip/1000}k` : chip}
             </button>
           ))}
         </div>
 
         {/* Active Bets Summary */}
         {bets.length > 0 && (
-          <div className="bg-card border border-border rounded-xl p-3 mb-3">
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Bahisleriniz</span>
+          <div className="bg-card border border-border rounded-xl p-2 mb-2">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wider">Bahisler</span>
               <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-accent">₺{totalBetAmount}</span>
+                <span className="text-xs font-bold text-accent">₺{totalBetAmount}</span>
                 <button onClick={clearBets} disabled={spinning} className="text-muted-foreground hover:text-destructive transition-colors">
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-3.5 w-3.5" />
                 </button>
               </div>
             </div>
             <div className="flex flex-wrap gap-1">
               {bets.map((b, i) => (
-                <span key={i} className="text-[10px] bg-secondary px-2 py-1 rounded-md text-foreground">
-                  {b.label}: ₺{b.amount}
-                </span>
+                <span key={i} className="text-[9px] bg-secondary px-1.5 py-0.5 rounded text-foreground">{b.label}: ₺{b.amount}</span>
               ))}
             </div>
           </div>
         )}
 
-        {/* Spin / Reset buttons */}
+        {/* Spin / Reset */}
         <div className="flex gap-2">
           {!showResult ? (
-            <Button
-              onClick={spin}
-              disabled={spinning || bets.length === 0}
-              className="flex-1 h-14 text-base font-bold rounded-xl shadow-lg active:scale-95 transition-all"
-            >
+            <Button onClick={spin} disabled={spinning || bets.length === 0}
+              className="flex-1 h-12 text-sm font-bold rounded-xl shadow-lg active:scale-95 transition-all">
               {spinning ? (
                 <div className="flex items-center gap-2">
-                  <div className="flex gap-1">
-                    {[0,1,2].map(i => <div key={i} className="w-1.5 h-1.5 rounded-full bg-primary-foreground animate-pulse" style={{ animationDelay: `${i * 200}ms` }} />)}
-                  </div>
+                  <div className="flex gap-1">{[0,1,2].map(i => <div key={i} className="w-1.5 h-1.5 rounded-full bg-primary-foreground animate-pulse" style={{ animationDelay: `${i*200}ms` }} />)}</div>
                   Dönüyor...
                 </div>
-              ) : (
-                "🎡 Çevir"
-              )}
+              ) : "🎡 Çevir"}
             </Button>
           ) : (
             <>
-              <Button
-                onClick={() => { setShowResult(false); setResult(null); setWinAmount(0); }}
-                variant="secondary"
-                className="flex-1 h-14 text-base font-bold rounded-xl shadow-lg active:scale-95 transition-all"
-              >
-                <RotateCcw className="h-4 w-4 mr-2" /> Aynı Bahis
+              <Button onClick={() => { setShowResult(false); setResult(null); setWinAmount(0); }} variant="secondary"
+                className="flex-1 h-12 text-sm font-bold rounded-xl shadow-lg active:scale-95 transition-all">
+                <RotateCcw className="h-4 w-4 mr-1" /> Aynı Bahis
               </Button>
-              <Button
-                onClick={() => { clearBets(); }}
-                className="flex-1 h-14 text-base font-bold rounded-xl shadow-lg active:scale-95 transition-all"
-              >
+              <Button onClick={clearBets} className="flex-1 h-12 text-sm font-bold rounded-xl shadow-lg active:scale-95 transition-all">
                 Yeni Bahis
               </Button>
             </>
