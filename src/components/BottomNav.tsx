@@ -23,12 +23,12 @@ const BottomNav = () => {
         {/* Center CTA */}
         <a
           href="#odds"
-          className="relative flex flex-col items-center justify-center px-4 py-2 gap-0.5"
+          className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-primary"
         >
-          <div className="absolute -top-5 w-14 h-14 rounded-full bg-primary flex items-center justify-center shadow-lg border-4 border-background">
-            <Trophy className="h-6 w-6 text-primary-foreground" />
+          <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center shadow-lg">
+            <Trophy className="h-5 w-5 text-primary-foreground" />
           </div>
-          <span className="text-[10px] font-bold text-primary mt-4">Bahisler</span>
+          <span className="text-[10px] font-bold text-primary">Bahisler</span>
         </a>
 
         <a

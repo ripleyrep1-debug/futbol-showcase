@@ -46,7 +46,7 @@ const Index = () => {
         />
 
         {/* Main Content */}
-        <main className="flex-1 min-w-0 pb-16 lg:pb-0">
+        <main className="flex-1 min-w-0 pb-20 lg:pb-0">
           <HeroSection />
           <BettingOdds onAddBet={handleAddBet} selectedBets={bets} />
           <FootballWidgets />
