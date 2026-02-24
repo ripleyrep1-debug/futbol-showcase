@@ -408,7 +408,7 @@ const OddsChip = ({
 
 /* ─── Main Component ─── */
 const BettingOdds = ({ onAddBet, selectedBets, selectedLeague }: BettingOddsProps) => {
-  const [activeFilter, setActiveFilter] = useState<"all" | "live" | "upcoming" | "popular">("all");
+  const [activeFilter, setActiveFilter] = useState<"all" | "live" | "upcoming" | "popular">("popular");
   const [activeDay, setActiveDay] = useState<string>("all"); // "all" or YYYY-MM-DD
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -523,9 +523,12 @@ const BettingOdds = ({ onAddBet, selectedBets, selectedLeague }: BettingOddsProp
       }
     }
 
-    // Sort: live first, then by date+time
+    // Sort: live first, then matches with odds first, then by date+time
     filtered = [...filtered].sort((a, b) => {
       if (a.isLive !== b.isLive) return a.isLive ? -1 : 1;
+      const aHasOdds = a.allBets.length > 0 ? 1 : 0;
+      const bHasOdds = b.allBets.length > 0 ? 1 : 0;
+      if (aHasOdds !== bHasOdds) return bHasOdds - aHasOdds;
       if (a.dateStr !== b.dateStr) return a.dateStr.localeCompare(b.dateStr);
       return a.time.localeCompare(b.time);
     });
