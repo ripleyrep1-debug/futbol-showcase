@@ -13,7 +13,7 @@ const AdminLayout = () => {
     );
   }
 
-  if (!user) return <Navigate to="/giris" replace />;
+  if (!user) return <Navigate to="/" replace />;
   if (!isAdmin) return <Navigate to="/" replace />;
 
   return (
