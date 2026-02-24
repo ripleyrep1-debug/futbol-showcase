@@ -9,24 +9,30 @@ interface LeagueSidebarProps {
   onClose: () => void;
 }
 
+// League IDs match API-Football league IDs, "country:" prefix matches by country
 const leagues = [
   { id: "popular", name: "Popüler Maçlar", icon: "🔥" },
-  { id: "super-lig", name: "Türkiye Süper Lig", icon: "🇹🇷" },
-  { id: "premier-league", name: "İngiltere Premier Ligi", icon: "🏴󠁧󠁢󠁥󠁮󠁧󠁿" },
-  { id: "la-liga", name: "İspanya LaLiga", icon: "🇪🇸" },
-  { id: "serie-a", name: "İtalya Serie A", icon: "🇮🇹" },
-  { id: "bundesliga", name: "Almanya Bundesliga", icon: "🇩🇪" },
-  { id: "ligue-1", name: "Fransa Ligue 1", icon: "🇫🇷" },
-  { id: "ucl", name: "UEFA Şampiyonlar Ligi", icon: "⭐" },
-  { id: "uel", name: "UEFA Avrupa Ligi", icon: "⭐" },
-  { id: "uecl", name: "UEFA Konferans Ligi", icon: "⭐" },
-  { id: "world-cup", name: "Dünya Kupası Elemeleri", icon: "🌍" },
-  { id: "championship", name: "İngiltere Championship", icon: "🏴󠁧󠁢󠁥󠁮󠁧󠁿" },
-  { id: "eredivisie", name: "Hollanda Eredivisie", icon: "🇳🇱" },
-  { id: "liga-portugal", name: "Portekiz Liga", icon: "🇵🇹" },
-  { id: "super-league-gr", name: "Yunanistan Süper Lig", icon: "🇬🇷" },
-  { id: "saudi", name: "Suudi Pro Ligi", icon: "🇸🇦" },
-  { id: "mls", name: "MLS", icon: "🇺🇸" },
+  { id: "country:Turkey", name: "Türkiye (Tümü)", icon: "🇹🇷" },
+  { id: "league:203", name: "Süper Lig", icon: "🇹🇷" },
+  { id: "league:194", name: "1. Lig", icon: "🇹🇷" },
+  { id: "league:552", name: "Türkiye Kupası", icon: "🇹🇷" },
+  { id: "league:39", name: "İngiltere Premier Ligi", icon: "🏴󠁧󠁢󠁥󠁮󠁧󠁿" },
+  { id: "league:140", name: "İspanya LaLiga", icon: "🇪🇸" },
+  { id: "league:135", name: "İtalya Serie A", icon: "🇮🇹" },
+  { id: "league:78", name: "Almanya Bundesliga", icon: "🇩🇪" },
+  { id: "league:61", name: "Fransa Ligue 1", icon: "🇫🇷" },
+  { id: "league:2", name: "UEFA Şampiyonlar Ligi", icon: "⭐" },
+  { id: "league:3", name: "UEFA Avrupa Ligi", icon: "⭐" },
+  { id: "league:848", name: "UEFA Konferans Ligi", icon: "⭐" },
+  { id: "country:England", name: "İngiltere (Tümü)", icon: "🏴󠁧󠁢󠁥󠁮󠁧󠁿" },
+  { id: "country:Spain", name: "İspanya (Tümü)", icon: "🇪🇸" },
+  { id: "country:Italy", name: "İtalya (Tümü)", icon: "🇮🇹" },
+  { id: "country:Germany", name: "Almanya (Tümü)", icon: "🇩🇪" },
+  { id: "country:France", name: "Fransa (Tümü)", icon: "🇫🇷" },
+  { id: "country:Netherlands", name: "Hollanda (Tümü)", icon: "🇳🇱" },
+  { id: "country:Portugal", name: "Portekiz (Tümü)", icon: "🇵🇹" },
+  { id: "country:Saudi-Arabia", name: "Suudi Pro Ligi", icon: "🇸🇦" },
+  { id: "country:USA", name: "MLS", icon: "🇺🇸" },
 ];
 
 interface LiveMatch {
