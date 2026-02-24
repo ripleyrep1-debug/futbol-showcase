@@ -47,6 +47,90 @@ export type Database = {
         }
         Relationships: []
       }
+      odds_overrides: {
+        Row: {
+          away_team: string | null
+          bet_type: string
+          bet_value: string | null
+          created_at: string
+          created_by: string | null
+          custom_odd: number
+          fixture_id: number
+          home_team: string | null
+          id: string
+          is_active: boolean
+          league_name: string | null
+        }
+        Insert: {
+          away_team?: string | null
+          bet_type: string
+          bet_value?: string | null
+          created_at?: string
+          created_by?: string | null
+          custom_odd: number
+          fixture_id: number
+          home_team?: string | null
+          id?: string
+          is_active?: boolean
+          league_name?: string | null
+        }
+        Update: {
+          away_team?: string | null
+          bet_type?: string
+          bet_value?: string | null
+          created_at?: string
+          created_by?: string | null
+          custom_odd?: number
+          fixture_id?: number
+          home_team?: string | null
+          id?: string
+          is_active?: boolean
+          league_name?: string | null
+        }
+        Relationships: []
+      }
+      payment_requests: {
+        Row: {
+          account_holder: string | null
+          admin_note: string | null
+          amount: number
+          created_at: string
+          iban: string | null
+          id: string
+          processed_at: string | null
+          processed_by: string | null
+          status: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          account_holder?: string | null
+          admin_note?: string | null
+          amount: number
+          created_at?: string
+          iban?: string | null
+          id?: string
+          processed_at?: string | null
+          processed_by?: string | null
+          status?: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          account_holder?: string | null
+          admin_note?: string | null
+          amount?: number
+          created_at?: string
+          iban?: string | null
+          id?: string
+          processed_at?: string | null
+          processed_by?: string | null
+          status?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null

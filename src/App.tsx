@@ -10,6 +10,7 @@ import AdminLayout from "./components/admin/AdminLayout";
 import Dashboard from "./pages/admin/Dashboard";
 import Users from "./pages/admin/Users";
 import Bets from "./pages/admin/Bets";
+import OddsControl from "./pages/admin/OddsControl";
 import Payments from "./pages/admin/Payments";
 import Settings from "./pages/admin/Settings";
 
@@ -28,6 +29,7 @@ const App = () => (
               <Route index element={<Dashboard />} />
               <Route path="kullanicilar" element={<Users />} />
               <Route path="bahisler" element={<Bets />} />
+              <Route path="oranlar" element={<OddsControl />} />
               <Route path="odemeler" element={<Payments />} />
               <Route path="ayarlar" element={<Settings />} />
             </Route>
