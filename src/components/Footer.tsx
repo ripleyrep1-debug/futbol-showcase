@@ -19,7 +19,7 @@ const Footer = () => {
               </span>
             </div>
             <p className="text-muted-foreground text-sm mb-5 max-w-sm">
-              Türkiye'nin en güvenilir futbol veri platformu. Canlı skorlar, detaylı istatistikler ve kapsamlı lig takibi.
+              Türkiye'nin en güvenilir bahis platformu. Canlı oranlar, anlık skorlar ve güvenli bahis deneyimi.
             </p>
             <div className="flex flex-wrap gap-5">
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
