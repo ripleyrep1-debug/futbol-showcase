@@ -75,7 +75,7 @@ const LiveSupportChat = () => {
         msgs.map((m) => ({
           id: m.id,
           text: m.message,
-          isAdmin: m.sender_type === "admin",
+          isAdmin: m.sender_type === "admin" || m.sender_type === "bot",
           time: new Date(m.created_at).toLocaleTimeString("tr-TR", {
             hour: "2-digit",
             minute: "2-digit",
@@ -111,7 +111,7 @@ const LiveSupportChat = () => {
               {
                 id: m.id,
                 text: m.message,
-                isAdmin: m.sender_type === "admin",
+                isAdmin: m.sender_type === "admin" || m.sender_type === "bot",
                 time: new Date(m.created_at).toLocaleTimeString("tr-TR", {
                   hour: "2-digit",
                   minute: "2-digit",
@@ -151,6 +151,11 @@ const LiveSupportChat = () => {
       sender_id: user.id,
       sender_type: "user",
       message: text,
+    });
+
+    // Trigger AI auto-reply (fire and forget - response comes via realtime)
+    supabase.functions.invoke("support-auto-reply", {
+      body: { conversation_id: conversationId, message: text },
     });
   };
 
