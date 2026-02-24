@@ -86,15 +86,21 @@ function handValue(hand: Card[]): number { let t = hand.reduce((s, c) => s + car
 function isBlackjack(hand: Card[]): boolean { return hand.length === 2 && handValue(hand) === 21; }
 function canSplit(hand: Card[]): boolean { return hand.length === 2 && cardValue(hand[0]) === cardValue(hand[1]); }
 
+// Determines if house should win this round
+let houseWinsThisRound = false;
+
 function riggedDeal(deck: Card[], houseEdge: number): { playerHand: Card[]; dealerHand: Card[]; remainingDeck: Card[] } {
   const d = [...deck];
-  const houseWins = Math.random() * 100 < houseEdge;
-  if (houseWins) {
+  houseWinsThisRound = Math.random() * 100 < houseEdge;
+  if (houseWinsThisRound) {
     const dc1 = d.find(c => ["10","J","Q","K"].includes(c.rank))!; d.splice(d.indexOf(dc1), 1);
     const dc2 = d.find(c => ["7","8","9","10","J","Q","K","A"].includes(c.rank))!; d.splice(d.indexOf(dc2), 1);
     const pc1 = d.find(c => ["4","5","6","7","8"].includes(c.rank))!; d.splice(d.indexOf(pc1), 1);
     const pc2 = d.find(c => ["2","3","4","5","6","7"].includes(c.rank))!; d.splice(d.indexOf(pc2), 1);
-    return { playerHand: [pc1, pc2], dealerHand: [dc1, dc2], remainingDeck: d };
+    // Stack remaining: high cards drawn first for player (bust-prone)
+    const high = d.filter(c => ["10","J","Q","K","9"].includes(c.rank));
+    const low = d.filter(c => !["10","J","Q","K","9"].includes(c.rank));
+    return { playerHand: [pc1, pc2], dealerHand: [dc1, dc2], remainingDeck: [...low, ...high] };
   } else {
     const pc1 = d.find(c => ["10","J","Q","K"].includes(c.rank))!; d.splice(d.indexOf(pc1), 1);
     const pc2 = d.find(c => ["9","10","J","Q","K","A"].includes(c.rank))!; d.splice(d.indexOf(pc2), 1);
@@ -102,6 +108,37 @@ function riggedDeal(deck: Card[], houseEdge: number): { playerHand: Card[]; deal
     const dc2 = d.find(c => ["2","3","4","5","6"].includes(c.rank))!; d.splice(d.indexOf(dc2), 1);
     return { playerHand: [pc1, pc2], dealerHand: [dc1, dc2], remainingDeck: d };
   }
+}
+
+// Biased card draw: gives bust-prone cards when house should win
+function drawCard(currentDeck: Card[], forPlayer: boolean): { card: Card; newDeck: Card[] } {
+  const d = [...currentDeck];
+  if (d.length === 0) {
+    const fresh = shuffleDeck(createDeck());
+    return { card: fresh[0], newDeck: fresh.slice(1) };
+  }
+  if (houseWinsThisRound && forPlayer) {
+    // Give player high card to bust them (they start ~10-15)
+    const idx = d.findIndex(c => ["10","J","Q","K","9","8"].includes(c.rank));
+    if (idx !== -1) { const card = d[idx]; d.splice(idx, 1); return { card, newDeck: d }; }
+  }
+  if (houseWinsThisRound && !forPlayer) {
+    // Give dealer low cards to avoid busting (dealer starts strong 17+)
+    const idx = d.findIndex(c => ["A","2","3","4","5"].includes(c.rank));
+    if (idx !== -1) { const card = d[idx]; d.splice(idx, 1); return { card, newDeck: d }; }
+  }
+  if (!houseWinsThisRound && !forPlayer) {
+    // Give dealer high card to bust them (dealer starts ~8-12)
+    const idx = d.findIndex(c => ["10","J","Q","K","9","8"].includes(c.rank));
+    if (idx !== -1) { const card = d[idx]; d.splice(idx, 1); return { card, newDeck: d }; }
+  }
+  if (!houseWinsThisRound && forPlayer) {
+    // Give player good cards
+    const idx = d.findIndex(c => ["A","2","3","4","5","6"].includes(c.rank));
+    if (idx !== -1) { const card = d[idx]; d.splice(idx, 1); return { card, newDeck: d }; }
+  }
+  const card = d.pop()!;
+  return { card, newDeck: d };
 }
 
 // ─── Card Component ───
@@ -260,8 +297,7 @@ const Blackjack = () => {
   const hit = () => {
     if (!activeHand || activeHand.standing || activeHand.busted) return;
     sfx.play("hit");
-    const newDeck = [...deck];
-    const card = newDeck.pop()!;
+    const { card, newDeck } = drawCard(deck, true);
     const newCards = [...activeHand.cards, card];
     const newHands = [...hands];
     newHands[activeHandIdx] = { ...activeHand, cards: newCards };
@@ -304,8 +340,7 @@ const Blackjack = () => {
     await supabase.from("transactions").insert({ user_id: user.id, amount: -extraBet, type: "blackjack", description: "Blackjack double down" });
     invalidateProfiles();
 
-    const newDeck = [...deck];
-    const card = newDeck.pop()!;
+    const { card, newDeck } = drawCard(deck, true);
     sfx.play("deal");
     const newCards = [...activeHand.cards, card];
     const newHands = [...hands];
@@ -337,18 +372,18 @@ const Blackjack = () => {
     await supabase.from("transactions").insert({ user_id: user.id, amount: -extraBet, type: "blackjack", description: "Blackjack split" });
     invalidateProfiles();
 
-    const newDeck = [...deck];
-    const card1 = newDeck.pop()!;
-    const card2 = newDeck.pop()!;
+    let currentDeck = [...deck];
+    const draw1 = drawCard(currentDeck, true); currentDeck = draw1.newDeck;
+    const draw2 = drawCard(currentDeck, true); currentDeck = draw2.newDeck;
     sfx.play("deal");
 
-    const hand1: HandState = { cards: [activeHand.cards[0], card1], bet: activeHand.bet, standing: false, busted: false, result: "", winAmount: 0 };
-    const hand2: HandState = { cards: [activeHand.cards[1], card2], bet: activeHand.bet, standing: false, busted: false, result: "", winAmount: 0 };
+    const hand1: HandState = { cards: [activeHand.cards[0], draw1.card], bet: activeHand.bet, standing: false, busted: false, result: "", winAmount: 0 };
+    const hand2: HandState = { cards: [activeHand.cards[1], draw2.card], bet: activeHand.bet, standing: false, busted: false, result: "", winAmount: 0 };
 
     const newHands = [...hands];
     newHands.splice(activeHandIdx, 1, hand1, hand2);
     setHands(newHands);
-    setDeck(newDeck);
+    setDeck(currentDeck);
   };
 
   const advanceHand = (currentHands: HandState[], currentIdx: number) => {
@@ -378,7 +413,8 @@ const Blackjack = () => {
         while (handValue(currentDealerHand) < 17 && !cancelled) {
           await delay(800);
           sfx.play("deal");
-          const card = currentDeck.pop()!;
+          const { card, newDeck: nd } = drawCard(currentDeck, false);
+          currentDeck = nd;
           currentDealerHand = [...currentDealerHand, card];
           setDealerHand([...currentDealerHand]);
           setDeck([...currentDeck]);
