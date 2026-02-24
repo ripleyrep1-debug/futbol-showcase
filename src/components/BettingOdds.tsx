@@ -24,6 +24,7 @@ export interface BetSelection {
 interface ParsedMatch {
   id: string;
   fixtureId: number;
+  leagueId: number;
   league: string;
   leagueLogo: string;
   leagueFlag: string | null;
@@ -69,6 +70,7 @@ function buildMatches(fixtures: ApiFixture[], oddsMap: Map<number, ApiOddsRespon
       return {
         id: String(f.fixture.id),
         fixtureId: f.fixture.id,
+        leagueId: f.league.id,
         league: f.league.name,
         leagueLogo: f.league.logo,
         leagueFlag: f.league.flag,
@@ -92,6 +94,7 @@ function buildMatches(fixtures: ApiFixture[], oddsMap: Map<number, ApiOddsRespon
 interface BettingOddsProps {
   onAddBet: (bet: BetSelection) => void;
   selectedBets: BetSelection[];
+  selectedLeague?: string;
 }
 
 /* ─── Collapsible bet market group ─── */
@@ -394,7 +397,7 @@ const OddsChip = ({
 };
 
 /* ─── Main Component ─── */
-const BettingOdds = ({ onAddBet, selectedBets }: BettingOddsProps) => {
+const BettingOdds = ({ onAddBet, selectedBets, selectedLeague }: BettingOddsProps) => {
   const [activeFilter, setActiveFilter] = useState<"all" | "live" | "upcoming" | "popular">("popular");
   const [activeDay, setActiveDay] = useState<string>("all"); // "all" or YYYY-MM-DD
   const [searchQuery, setSearchQuery] = useState("");
@@ -461,7 +464,18 @@ const BettingOdds = ({ onAddBet, selectedBets }: BettingOddsProps) => {
   const filteredMatches = useMemo(() => {
     let filtered = allMatches;
 
-    // Apply day filter first
+    // Apply league filter from sidebar
+    if (selectedLeague && selectedLeague !== "all" && selectedLeague !== "popular") {
+      if (selectedLeague.startsWith("country:")) {
+        const country = selectedLeague.replace("country:", "");
+        filtered = filtered.filter((m) => m.leagueCountry === country);
+      } else if (selectedLeague.startsWith("league:")) {
+        const leagueId = parseInt(selectedLeague.replace("league:", ""), 10);
+        filtered = filtered.filter((m) => m.leagueId === leagueId);
+      }
+    }
+
+    // Apply day filter
     if (activeDay !== "all") {
       filtered = filtered.filter((m) => m.dateStr === activeDay);
     }
@@ -499,7 +513,7 @@ const BettingOdds = ({ onAddBet, selectedBets }: BettingOddsProps) => {
     });
 
     return filtered.slice(0, 60);
-  }, [allMatches, activeFilter, activeDay, searchQuery]);
+  }, [allMatches, activeFilter, activeDay, searchQuery, selectedLeague]);
 
   const matchesWithOdds = allMatches.filter((m) => m.allBets.length > 0).length;
   const liveCount = allMatches.filter((m) => m.isLive).length;
