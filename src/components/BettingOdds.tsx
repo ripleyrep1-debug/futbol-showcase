@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Clock, Zap, ChevronDown, ChevronUp, Trophy, Star, Loader2, AlertCircle, RefreshCw, Search, X } from "lucide-react";
+import { Clock, Zap, ChevronDown, ChevronUp, Trophy, Star, Loader2, AlertCircle, RefreshCw, Search, X, CalendarDays } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import {
   fetchTodaysFixtures,
@@ -33,6 +33,8 @@ interface ParsedMatch {
   homeLogo: string;
   awayLogo: string;
   time: string;
+  dateStr: string; // YYYY-MM-DD
+  dateLabel: string; // "Bugün", "Yarın", "27 Şub Prş" etc.
   isLive: boolean;
   liveMinute: string | null;
   homeScore: number | null;
@@ -51,6 +53,19 @@ function buildMatches(fixtures: ApiFixture[], oddsMap: Map<number, ApiOddsRespon
       const allBets = oddsData?.bookmakers?.[0]?.bets || [];
       const date = new Date(f.fixture.date);
       const isLive = ["1H", "2H", "HT", "ET", "P", "BT", "LIVE"].includes(f.fixture.status.short);
+      
+      const today = new Date();
+      const tomorrow = new Date();
+      tomorrow.setDate(today.getDate() + 1);
+      const dateStr = date.toISOString().split("T")[0];
+      const todayStr = today.toISOString().split("T")[0];
+      const tomorrowStr = tomorrow.toISOString().split("T")[0];
+      
+      let dateLabel: string;
+      if (dateStr === todayStr) dateLabel = "Bugün";
+      else if (dateStr === tomorrowStr) dateLabel = "Yarın";
+      else dateLabel = date.toLocaleDateString("tr-TR", { day: "numeric", month: "short", weekday: "short" });
+      
       return {
         id: String(f.fixture.id),
         fixtureId: f.fixture.id,
@@ -63,6 +78,8 @@ function buildMatches(fixtures: ApiFixture[], oddsMap: Map<number, ApiOddsRespon
         homeLogo: f.teams.home.logo,
         awayLogo: f.teams.away.logo,
         time: date.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }),
+        dateStr,
+        dateLabel,
         isLive,
         liveMinute: isLive && f.fixture.status.elapsed ? `${f.fixture.status.elapsed}'` : null,
         homeScore: f.goals.home,
@@ -217,6 +234,7 @@ const MatchCard = ({
         ) : (
           <span className="text-xs text-muted-foreground flex items-center gap-1">
             <Clock className="h-3 w-3" />
+            {match.dateLabel !== "Bugün" && <span className="text-[10px] opacity-75">{match.dateLabel}</span>}
             {match.time}
           </span>
         )}
@@ -378,6 +396,7 @@ const OddsChip = ({
 /* ─── Main Component ─── */
 const BettingOdds = ({ onAddBet, selectedBets }: BettingOddsProps) => {
   const [activeFilter, setActiveFilter] = useState<"all" | "live" | "upcoming" | "popular">("popular");
+  const [activeDay, setActiveDay] = useState<string>("all"); // "all" or YYYY-MM-DD
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -430,8 +449,22 @@ const BettingOdds = ({ onAddBet, selectedBets }: BettingOddsProps) => {
     }
   }, [searchOpen]);
 
+  // Get unique days for day filter tabs
+  const availableDays = useMemo(() => {
+    const dayMap = new Map<string, string>();
+    allMatches.forEach((m) => {
+      if (!dayMap.has(m.dateStr)) dayMap.set(m.dateStr, m.dateLabel);
+    });
+    return Array.from(dayMap.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  }, [allMatches]);
+
   const filteredMatches = useMemo(() => {
     let filtered = allMatches;
+
+    // Apply day filter first
+    if (activeDay !== "all") {
+      filtered = filtered.filter((m) => m.dateStr === activeDay);
+    }
 
     // Apply search filter
     if (searchQuery.trim()) {
@@ -444,32 +477,29 @@ const BettingOdds = ({ onAddBet, selectedBets }: BettingOddsProps) => {
       );
     } else {
       // Apply category filter only when not searching
-      if (activeFilter === "live") filtered = allMatches.filter((m) => m.isLive);
-      else if (activeFilter === "upcoming") filtered = allMatches.filter((m) => !m.isLive);
+      if (activeFilter === "live") filtered = filtered.filter((m) => m.isLive);
+      else if (activeFilter === "upcoming") filtered = filtered.filter((m) => !m.isLive);
       else if (activeFilter === "popular") {
-        // Show matches with odds first, then all remaining (so Turkish matches without odds still show)
-        const withOdds = allMatches.filter((m) => m.allBets.length > 0);
+        const withOdds = filtered.filter((m) => m.allBets.length > 0);
         if (withOdds.length > 0) {
           filtered = withOdds.sort((a, b) => b.allBets.length - a.allBets.length);
-        } else {
-          // No odds available at all — show all upcoming matches
-          filtered = allMatches;
         }
       }
       else if (activeFilter === "all") { /* show all */ }
     }
 
-    // Sort: live first, then Turkish, then by time
+    // Sort: live first, then Turkish, then by date+time
     filtered = [...filtered].sort((a, b) => {
       if (a.isLive !== b.isLive) return a.isLive ? -1 : 1;
       const ta = a.leagueCountry === "Turkey" ? 0 : 1;
       const tb = b.leagueCountry === "Turkey" ? 0 : 1;
       if (ta !== tb) return ta - tb;
+      if (a.dateStr !== b.dateStr) return a.dateStr.localeCompare(b.dateStr);
       return a.time.localeCompare(b.time);
     });
 
-    return filtered.slice(0, 50);
-  }, [allMatches, activeFilter, searchQuery]);
+    return filtered.slice(0, 60);
+  }, [allMatches, activeFilter, activeDay, searchQuery]);
 
   const matchesWithOdds = allMatches.filter((m) => m.allBets.length > 0).length;
   const liveCount = allMatches.filter((m) => m.isLive).length;
@@ -567,7 +597,36 @@ const BettingOdds = ({ onAddBet, selectedBets }: BettingOddsProps) => {
           </div>
         </div>
 
-        {/* Matches */}
+        {/* Day filter tabs */}
+        {availableDays.length > 1 && (
+          <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+            <button
+              onClick={() => setActiveDay("all")}
+              className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] sm:text-xs font-medium transition-all whitespace-nowrap ${
+                activeDay === "all"
+                  ? "bg-accent text-accent-foreground shadow"
+                  : "bg-secondary/50 text-muted-foreground hover:text-foreground"
+              }`}
+            >
+              <CalendarDays className="h-3 w-3" />
+              Tümü
+            </button>
+            {availableDays.map(([dateStr, label]) => (
+              <button
+                key={dateStr}
+                onClick={() => setActiveDay(dateStr)}
+                className={`px-2.5 py-1.5 rounded-lg text-[11px] sm:text-xs font-medium transition-all whitespace-nowrap ${
+                  activeDay === dateStr
+                    ? "bg-accent text-accent-foreground shadow"
+                    : "bg-secondary/50 text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        )}
+
         {filteredMatches.length === 0 ? (
           <div className="text-center py-12 text-muted-foreground">
             <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
