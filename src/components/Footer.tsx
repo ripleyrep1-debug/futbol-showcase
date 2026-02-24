@@ -1,3 +1,4 @@
+import { Link } from "react-router-dom";
 import bluebetLogo from "@/assets/bluebet-logo-new.png";
 import { Shield, Lock, Headphones } from "lucide-react";
 
@@ -41,10 +42,10 @@ const Footer = () => {
           <div>
             <h4 className="font-display text-base font-bold text-foreground mb-4">HIZLI LİNKLER</h4>
             <ul className="space-y-2">
-              <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors text-sm">Ana Sayfa</a></li>
-              <li><a href="#live" className="text-muted-foreground hover:text-primary transition-colors text-sm">Canlı Maçlar</a></li>
-              <li><a href="#leagues" className="text-muted-foreground hover:text-primary transition-colors text-sm">Lig Maçları</a></li>
-              <li><a href="#standings" className="text-muted-foreground hover:text-primary transition-colors text-sm">Puan Durumu</a></li>
+              <li><Link to="/" className="text-muted-foreground hover:text-primary transition-colors text-sm">Ana Sayfa</Link></li>
+              <li><Link to="/#odds" className="text-muted-foreground hover:text-primary transition-colors text-sm">Canlı Maçlar</Link></li>
+              <li><Link to="/#leagues" className="text-muted-foreground hover:text-primary transition-colors text-sm">Lig Maçları</Link></li>
+              <li><Link to="/#standings" className="text-muted-foreground hover:text-primary transition-colors text-sm">Puan Durumu</Link></li>
             </ul>
           </div>
 
@@ -52,10 +53,10 @@ const Footer = () => {
           <div>
             <h4 className="font-display text-base font-bold text-foreground mb-4">DESTEK</h4>
             <ul className="space-y-2">
-              <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors text-sm">SSS</a></li>
-              <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors text-sm">İletişim</a></li>
-              <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors text-sm">Kurallar</a></li>
-              <li><a href="#" className="text-muted-foreground hover:text-primary transition-colors text-sm">Gizlilik Politikası</a></li>
+              <li><Link to="/sss" className="text-muted-foreground hover:text-primary transition-colors text-sm">SSS</Link></li>
+              <li><Link to="/iletisim" className="text-muted-foreground hover:text-primary transition-colors text-sm">İletişim</Link></li>
+              <li><Link to="/kurallar" className="text-muted-foreground hover:text-primary transition-colors text-sm">Kurallar</Link></li>
+              <li><Link to="/gizlilik" className="text-muted-foreground hover:text-primary transition-colors text-sm">Gizlilik Politikası</Link></li>
             </ul>
           </div>
         </div>
