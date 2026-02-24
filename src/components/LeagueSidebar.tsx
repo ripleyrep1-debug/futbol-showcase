@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Star, Search, ChevronRight, Trophy, Zap, Loader2 } from "lucide-react";
+import { Star, Search, ChevronRight, Trophy, Zap, Loader2, X } from "lucide-react";
 import { fetchTodaysFixtures, type ApiFixture } from "@/lib/api-football";
 
 interface LeagueSidebarProps {
@@ -104,6 +104,14 @@ const LeagueSidebar = ({ onLeagueSelect, selectedLeague, isOpen, onClose }: Leag
           isOpen ? "translate-x-0" : "-translate-x-full"
         }`}
       >
+        {/* Mobile close button */}
+        <div className="flex items-center justify-between px-3 py-2 border-b border-border lg:hidden shrink-0">
+          <span className="text-sm font-bold text-foreground">Menü</span>
+          <button onClick={onClose} className="p-1.5 rounded-lg hover:bg-secondary text-muted-foreground hover:text-foreground transition-colors">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
         {/* Tabs */}
         <div className="flex border-b border-border shrink-0">
           <button
@@ -115,7 +123,7 @@ const LeagueSidebar = ({ onLeagueSelect, selectedLeague, isOpen, onClose }: Leag
             }`}
           >
             <Trophy className="h-3.5 w-3.5" />
-            Spor Bahisleri
+            Spor
           </button>
           <button
             onClick={() => setActiveTab("live")}
@@ -166,21 +174,22 @@ const LeagueSidebar = ({ onLeagueSelect, selectedLeague, isOpen, onClose }: Leag
               </button>
 
               {filtered.map((league) => (
-                <button
+                <div
                   key={league.id}
-                  onClick={() => onLeagueSelect?.(league.id)}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-colors group ${
+                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-colors group cursor-pointer ${
                     selectedLeague === league.id
                       ? "bg-primary/10 text-primary"
                       : "text-muted-foreground hover:text-foreground hover:bg-secondary"
                   }`}
+                  onClick={() => onLeagueSelect?.(league.id)}
                 >
-                  <button
+                  <span
+                    role="button"
                     onClick={(e) => {
                       e.stopPropagation();
                       toggleFav(league.id);
                     }}
-                    className="shrink-0"
+                    className="shrink-0 cursor-pointer"
                   >
                     <Star
                       className={`h-3.5 w-3.5 transition-colors ${
@@ -189,10 +198,10 @@ const LeagueSidebar = ({ onLeagueSelect, selectedLeague, isOpen, onClose }: Leag
                           : "text-muted-foreground/40 group-hover:text-muted-foreground"
                       }`}
                     />
-                  </button>
+                  </span>
                   <span className="text-base shrink-0">{league.icon}</span>
                   <span className="truncate text-left">{league.name}</span>
-                </button>
+                </div>
               ))}
             </div>
           ) : (
