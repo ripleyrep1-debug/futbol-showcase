@@ -3,10 +3,13 @@ import { Clock, Zap, ChevronDown, ChevronUp, Trophy, Star, Loader2, AlertCircle,
 import {
   fetchTodaysFixtures,
   fetchOddsByDate,
-  POPULAR_LEAGUES,
   type ApiFixture,
   type ApiOddsResponse,
   type ApiOddsBet,
+  BET_CATEGORIES,
+  PRIMARY_BET_IDS,
+  getBetTypeName,
+  translateValue,
 } from "@/lib/api-football";
 
 export interface BetSelection {
@@ -32,76 +35,13 @@ interface ParsedMatch {
   liveMinute: string | null;
   homeScore: number | null;
   awayScore: number | null;
-  odds: { home: number; draw: number; away: number } | null;
-  overUnder: { over25: number; under25: number } | null;
-  doubleChance: { homeOrDraw: number; awayOrDraw: number; homeOrAway: number } | null;
-}
-
-function parseOddsForFixture(oddsData: ApiOddsResponse | undefined): {
-  matchResult: { home: number; draw: number; away: number } | null;
-  overUnder: { over25: number; under25: number } | null;
-  doubleChance: { homeOrDraw: number; awayOrDraw: number; homeOrAway: number } | null;
-} {
-  if (!oddsData || !oddsData.bookmakers?.length) {
-    return { matchResult: null, overUnder: null, doubleChance: null };
-  }
-
-  const bookmaker = oddsData.bookmakers[0];
-  const betsMap = new Map<number, ApiOddsBet>();
-  bookmaker.bets.forEach((b) => betsMap.set(b.id, b));
-
-  // Match Winner (bet id 1)
-  let matchResult = null;
-  const mw = betsMap.get(1);
-  if (mw && mw.values.length >= 3) {
-    const home = mw.values.find((v) => v.value === "Home");
-    const draw = mw.values.find((v) => v.value === "Draw");
-    const away = mw.values.find((v) => v.value === "Away");
-    if (home && draw && away) {
-      matchResult = {
-        home: parseFloat(home.odd),
-        draw: parseFloat(draw.odd),
-        away: parseFloat(away.odd),
-      };
-    }
-  }
-
-  // Over/Under 2.5 (bet id 5)
-  let overUnder = null;
-  const ou = betsMap.get(5);
-  if (ou) {
-    const over = ou.values.find((v) => v.value === "Over 2.5");
-    const under = ou.values.find((v) => v.value === "Under 2.5");
-    if (over && under) {
-      overUnder = {
-        over25: parseFloat(over.odd),
-        under25: parseFloat(under.odd),
-      };
-    }
-  }
-
-  // Double Chance (bet id 12)
-  let doubleChance = null;
-  const dc = betsMap.get(12);
-  if (dc) {
-    const hd = dc.values.find((v) => v.value === "Home/Draw");
-    const ad = dc.values.find((v) => v.value === "Draw/Away");
-    const ha = dc.values.find((v) => v.value === "Home/Away");
-    if (hd && ad && ha) {
-      doubleChance = {
-        homeOrDraw: parseFloat(hd.odd),
-        awayOrDraw: parseFloat(ad.odd),
-        homeOrAway: parseFloat(ha.odd),
-      };
-    }
-  }
-
-  return { matchResult, overUnder, doubleChance };
+  allBets: ApiOddsBet[];
 }
 
 function buildMatches(fixtures: ApiFixture[], oddsMap: Map<number, ApiOddsResponse>): ParsedMatch[] {
   return fixtures.map((f) => {
-    const { matchResult, overUnder, doubleChance } = parseOddsForFixture(oddsMap.get(f.fixture.id));
+    const oddsData = oddsMap.get(f.fixture.id);
+    const allBets = oddsData?.bookmakers?.[0]?.bets || [];
     const date = new Date(f.fixture.date);
     const isLive = ["1H", "2H", "HT", "ET", "P", "BT", "LIVE"].includes(f.fixture.status.short);
 
@@ -120,9 +60,7 @@ function buildMatches(fixtures: ApiFixture[], oddsMap: Map<number, ApiOddsRespon
       liveMinute: isLive && f.fixture.status.elapsed ? `${f.fixture.status.elapsed}'` : null,
       homeScore: f.goals.home,
       awayScore: f.goals.away,
-      odds: matchResult,
-      overUnder,
-      doubleChance,
+      allBets,
     };
   });
 }
@@ -132,12 +70,97 @@ interface BettingOddsProps {
   selectedBets: BetSelection[];
 }
 
+const OddsButton = ({
+  matchId,
+  label,
+  odds,
+  selectionKey,
+  isSelected,
+  onClick,
+  compact,
+}: {
+  matchId: string;
+  label: string;
+  odds: string;
+  selectionKey: string;
+  isSelected: boolean;
+  onClick: () => void;
+  compact?: boolean;
+}) => (
+  <button
+    onClick={onClick}
+    className={`flex ${compact ? "justify-between" : "flex-col items-center"} py-2 px-2 rounded-lg border font-semibold transition-all text-sm ${
+      isSelected
+        ? "bg-primary text-primary-foreground border-primary shadow-lg"
+        : "bg-secondary border-border text-foreground hover:border-primary/50 hover:bg-primary/10"
+    }`}
+  >
+    <span className={`text-[10px] ${isSelected ? "text-primary-foreground/70" : "text-muted-foreground"} ${compact ? "" : "mb-0.5"} font-normal`}>
+      {label}
+    </span>
+    <span className="font-bold">{parseFloat(odds).toFixed(2)}</span>
+  </button>
+);
+
+const BetMarketSection = ({
+  bet,
+  matchId,
+  matchLabel,
+  selectedBets,
+  onAddBet,
+}: {
+  bet: ApiOddsBet;
+  matchId: string;
+  matchLabel: string;
+  selectedBets: BetSelection[];
+  onAddBet: (bet: BetSelection) => void;
+}) => {
+  const betName = getBetTypeName(bet.id, bet.name);
+  const cols = bet.values.length <= 2 ? 2 : bet.values.length === 3 ? 3 : bet.values.length <= 4 ? 2 : 3;
+
+  const isSelectedCheck = (selKey: string) =>
+    selectedBets.some((b) => b.matchId === matchId && b.selection === selKey);
+
+  return (
+    <div>
+      <span className="text-xs text-muted-foreground mb-1.5 block font-medium">{betName}</span>
+      <div className={`grid gap-1.5`} style={{ gridTemplateColumns: `repeat(${Math.min(cols, bet.values.length)}, 1fr)` }}>
+        {bet.values.map((v, i) => {
+          const selKey = `${betName}: ${v.value}`;
+          const label = translateValue(v.value);
+          return (
+            <OddsButton
+              key={`${v.value}-${i}`}
+              matchId={matchId}
+              label={label}
+              odds={v.odd}
+              selectionKey={selKey}
+              isSelected={isSelectedCheck(selKey)}
+              compact={bet.values.length > 3}
+              onClick={() =>
+                onAddBet({
+                  id: `${matchId}-${bet.id}-${v.value}`,
+                  matchId,
+                  matchLabel,
+                  selection: selKey,
+                  odds: parseFloat(v.odd),
+                })
+              }
+            />
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
 const BettingOdds = ({ onAddBet, selectedBets }: BettingOddsProps) => {
   const [expandedMatch, setExpandedMatch] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<"all" | "live" | "upcoming" | "popular">("popular");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [allMatches, setAllMatches] = useState<ParsedMatch[]>([]);
+  const [activeBetCategory, setActiveBetCategory] = useState<string>("main");
 
   const loadData = async () => {
     setLoading(true);
@@ -162,7 +185,6 @@ const BettingOdds = ({ onAddBet, selectedBets }: BettingOddsProps) => {
 
   useEffect(() => {
     loadData();
-    // Refresh every 5 minutes
     const interval = setInterval(loadData, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
@@ -173,40 +195,20 @@ const BettingOdds = ({ onAddBet, selectedBets }: BettingOddsProps) => {
     if (activeFilter === "live") {
       filtered = allMatches.filter((m) => m.isLive);
     } else if (activeFilter === "upcoming") {
-      filtered = allMatches.filter((m) => !m.isLive && m.odds !== null);
+      filtered = allMatches.filter((m) => !m.isLive && m.allBets.length > 0);
     } else if (activeFilter === "popular") {
-      filtered = allMatches.filter((m) => {
-        const leagueId = parseInt(m.id); // we need league id
-        return true; // show matches with odds from popular leagues
-      });
-      // Sort: popular leagues first, then matches with odds first
-      filtered = [...allMatches].sort((a, b) => {
-        const aHasOdds = a.odds ? 1 : 0;
-        const bHasOdds = b.odds ? 1 : 0;
-        return bHasOdds - aHasOdds;
-      });
+      filtered = [...allMatches].sort((a, b) => b.allBets.length - a.allBets.length);
     }
 
-    // Only show matches that have odds
     if (activeFilter !== "all") {
-      filtered = filtered.filter((m) => m.odds !== null);
+      filtered = filtered.filter((m) => m.allBets.length > 0);
     }
 
-    return filtered.slice(0, 50); // Limit for performance
+    return filtered.slice(0, 50);
   }, [allMatches, activeFilter]);
 
   const isSelected = (matchId: string, selection: string) =>
     selectedBets.some((b) => b.matchId === matchId && b.selection === selection);
-
-  const handleOddsClick = (match: ParsedMatch, selection: string, odds: number) => {
-    onAddBet({
-      id: `${match.id}-${selection}`,
-      matchId: match.id,
-      matchLabel: `${match.homeTeam} vs ${match.awayTeam}`,
-      selection,
-      odds,
-    });
-  };
 
   if (loading) {
     return (
@@ -225,10 +227,7 @@ const BettingOdds = ({ onAddBet, selectedBets }: BettingOddsProps) => {
         <div className="container mx-auto px-4 flex flex-col items-center justify-center py-20 gap-3">
           <AlertCircle className="h-8 w-8 text-destructive" />
           <p className="text-destructive text-sm text-center">{error}</p>
-          <button
-            onClick={loadData}
-            className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm"
-          >
+          <button onClick={loadData} className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm">
             <RefreshCw className="h-4 w-4" /> Tekrar Dene
           </button>
         </div>
@@ -236,14 +235,14 @@ const BettingOdds = ({ onAddBet, selectedBets }: BettingOddsProps) => {
     );
   }
 
-  const matchesWithOdds = allMatches.filter((m) => m.odds !== null).length;
+  const matchesWithOdds = allMatches.filter((m) => m.allBets.length > 0).length;
   const liveCount = allMatches.filter((m) => m.isLive).length;
 
   return (
     <section id="odds" className="py-8">
       <div className="container mx-auto px-4">
         {/* Section Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
           <div>
             <h2 className="section-title flex items-center gap-2">
               <Trophy className="h-6 w-6 md:h-7 md:w-7 text-primary" />
@@ -253,8 +252,7 @@ const BettingOdds = ({ onAddBet, selectedBets }: BettingOddsProps) => {
               {allMatches.length} maç • {matchesWithOdds} oran mevcut • {liveCount} canlı
             </p>
           </div>
-          {/* Filters */}
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 flex-wrap items-center">
             {[
               { key: "popular" as const, label: "Popüler", icon: Star },
               { key: "live" as const, label: `Canlı (${liveCount})`, icon: Zap },
@@ -274,14 +272,27 @@ const BettingOdds = ({ onAddBet, selectedBets }: BettingOddsProps) => {
                 {label}
               </button>
             ))}
-            <button
-              onClick={loadData}
-              className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-primary transition-colors"
-              title="Yenile"
-            >
+            <button onClick={loadData} className="flex items-center gap-1 px-2 py-1.5 rounded-lg text-xs text-muted-foreground hover:text-primary transition-colors" title="Yenile">
               <RefreshCw className="h-3.5 w-3.5" />
             </button>
           </div>
+        </div>
+
+        {/* Bet Category Tabs */}
+        <div className="flex gap-1.5 overflow-x-auto pb-3 mb-4 scrollbar-hide">
+          {Object.entries(BET_CATEGORIES).map(([key, cat]) => (
+            <button
+              key={key}
+              onClick={() => setActiveBetCategory(key)}
+              className={`whitespace-nowrap px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                activeBetCategory === key
+                  ? "bg-accent text-accent-foreground shadow"
+                  : "bg-secondary/50 text-muted-foreground hover:text-foreground hover:bg-secondary"
+              }`}
+            >
+              {cat.label}
+            </button>
+          ))}
         </div>
 
         {filteredMatches.length === 0 ? (
@@ -290,155 +301,117 @@ const BettingOdds = ({ onAddBet, selectedBets }: BettingOddsProps) => {
           </div>
         ) : (
           <div className="space-y-3">
-            {filteredMatches.map((match) => (
-              <div key={match.id} className="card-match">
-                {/* League Header */}
-                <div className="flex items-center justify-between mb-3">
-                  <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-                    {match.leagueFlag ? (
-                      <img src={match.leagueFlag} alt="" className="h-3.5 w-3.5 rounded-sm object-cover" />
-                    ) : (
-                      <img src={match.leagueLogo} alt="" className="h-3.5 w-3.5 rounded-sm object-contain" />
-                    )}
-                    {match.league}
-                  </span>
-                  <div className="flex items-center gap-2">
-                    {match.isLive ? (
-                      <span className="live-badge">
-                        <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                        CANLI {match.liveMinute}
-                      </span>
-                    ) : (
-                      <span className="text-xs text-muted-foreground flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {match.time}
-                      </span>
-                    )}
-                  </div>
-                </div>
+            {filteredMatches.map((match) => {
+              const activeCat = BET_CATEGORIES[activeBetCategory];
+              const primaryBets = match.allBets.filter((b) => PRIMARY_BET_IDS.includes(b.id) && activeCat.betIds.includes(b.id));
+              const categoryBets = match.allBets.filter((b) => activeCat.betIds.includes(b.id));
+              const displayBets = primaryBets.length > 0 ? primaryBets : categoryBets.slice(0, 3);
+              const expandedBets = categoryBets.filter((b) => !displayBets.includes(b));
+              const isExpanded = expandedMatch === match.id;
+              const matchLabel = `${match.homeTeam} vs ${match.awayTeam}`;
 
-                {/* Teams + Score */}
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <img src={match.homeLogo} alt={match.homeTeam} className="h-6 w-6 object-contain" />
-                      <span className="font-semibold text-sm sm:text-base text-foreground">{match.homeTeam}</span>
-                    </div>
+              return (
+                <div key={match.id} className="card-match">
+                  {/* League Header */}
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
+                      {match.leagueFlag ? (
+                        <img src={match.leagueFlag} alt="" className="h-3.5 w-3.5 rounded-sm object-cover" />
+                      ) : (
+                        <img src={match.leagueLogo} alt="" className="h-3.5 w-3.5 rounded-sm object-contain" />
+                      )}
+                      {match.league}
+                    </span>
                     <div className="flex items-center gap-2">
-                      <img src={match.awayLogo} alt={match.awayTeam} className="h-6 w-6 object-contain" />
-                      <span className="font-semibold text-sm sm:text-base text-foreground">{match.awayTeam}</span>
+                      {match.isLive ? (
+                        <span className="live-badge">
+                          <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
+                          CANLI {match.liveMinute}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {match.time}
+                        </span>
+                      )}
                     </div>
                   </div>
-                  {(match.isLive || match.homeScore !== null) && (
-                    <div className="text-right">
-                      <div className="text-2xl font-bold text-foreground font-display">
-                        {match.homeScore ?? 0} - {match.awayScore ?? 0}
+
+                  {/* Teams + Score */}
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <img src={match.homeLogo} alt={match.homeTeam} className="h-6 w-6 object-contain" />
+                        <span className="font-semibold text-sm sm:text-base text-foreground">{match.homeTeam}</span>
                       </div>
+                      <div className="flex items-center gap-2">
+                        <img src={match.awayLogo} alt={match.awayTeam} className="h-6 w-6 object-contain" />
+                        <span className="font-semibold text-sm sm:text-base text-foreground">{match.awayTeam}</span>
+                      </div>
+                    </div>
+                    {(match.isLive || match.homeScore !== null) && (
+                      <div className="text-right">
+                        <div className="text-2xl font-bold text-foreground font-display">
+                          {match.homeScore ?? 0} - {match.awayScore ?? 0}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Bets for active category */}
+                  {categoryBets.length > 0 ? (
+                    <>
+                      <div className="space-y-3">
+                        {displayBets.map((bet) => (
+                          <BetMarketSection
+                            key={bet.id}
+                            bet={bet}
+                            matchId={match.id}
+                            matchLabel={matchLabel}
+                            selectedBets={selectedBets}
+                            onAddBet={onAddBet}
+                          />
+                        ))}
+                      </div>
+
+                      {expandedBets.length > 0 && (
+                        <>
+                          <button
+                            onClick={() => setExpandedMatch(isExpanded ? null : match.id)}
+                            className="w-full flex items-center justify-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors py-2 mt-2"
+                          >
+                            {isExpanded ? (
+                              <>Daha Az <ChevronUp className="h-3 w-3" /></>
+                            ) : (
+                              <>+{expandedBets.length} Bahis Daha <ChevronDown className="h-3 w-3" /></>
+                            )}
+                          </button>
+
+                          {isExpanded && (
+                            <div className="mt-2 pt-3 border-t border-border space-y-3">
+                              {expandedBets.map((bet) => (
+                                <BetMarketSection
+                                  key={bet.id}
+                                  bet={bet}
+                                  matchId={match.id}
+                                  matchLabel={matchLabel}
+                                  selectedBets={selectedBets}
+                                  onAddBet={onAddBet}
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </>
+                      )}
+                    </>
+                  ) : (
+                    <div className="text-center py-2">
+                      <span className="text-xs text-muted-foreground">Bu kategori için oran mevcut değil</span>
                     </div>
                   )}
                 </div>
-
-                {/* Main Odds (1X2) */}
-                {match.odds ? (
-                  <>
-                    <div className="grid grid-cols-3 gap-2 mb-2">
-                      {[
-                        { key: "1", label: "1", odds: match.odds.home },
-                        { key: "X", label: "X", odds: match.odds.draw },
-                        { key: "2", label: "2", odds: match.odds.away },
-                      ].map(({ key, label, odds }) => (
-                        <button
-                          key={key}
-                          onClick={() => handleOddsClick(match, `Maç Sonucu: ${label}`, odds)}
-                          className={`flex flex-col items-center py-2.5 px-2 rounded-lg border font-semibold transition-all text-sm ${
-                            isSelected(match.id, `Maç Sonucu: ${label}`)
-                              ? "bg-primary text-primary-foreground border-primary shadow-lg"
-                              : "bg-secondary border-border text-foreground hover:border-primary/50 hover:bg-primary/10"
-                          }`}
-                        >
-                          <span className="text-[10px] text-muted-foreground mb-0.5 font-normal">{label}</span>
-                          <span className="font-bold">{odds.toFixed(2)}</span>
-                        </button>
-                      ))}
-                    </div>
-
-                    {/* Expand button */}
-                    {(match.overUnder || match.doubleChance) && (
-                      <button
-                        onClick={() => setExpandedMatch(expandedMatch === match.id ? null : match.id)}
-                        className="w-full flex items-center justify-center gap-1 text-xs text-muted-foreground hover:text-primary transition-colors py-1"
-                      >
-                        {expandedMatch === match.id ? (
-                          <>Daha Az <ChevronUp className="h-3 w-3" /></>
-                        ) : (
-                          <>Daha Fazla Bahis <ChevronDown className="h-3 w-3" /></>
-                        )}
-                      </button>
-                    )}
-
-                    {/* Expanded Odds */}
-                    {expandedMatch === match.id && (
-                      <div className="mt-3 pt-3 border-t border-border space-y-3">
-                        {match.overUnder && (
-                          <div>
-                            <span className="text-xs text-muted-foreground mb-1.5 block font-medium">Üst/Alt 2.5 Gol</span>
-                            <div className="grid grid-cols-2 gap-2">
-                              {[
-                                { key: "Üst 2.5", odds: match.overUnder.over25 },
-                                { key: "Alt 2.5", odds: match.overUnder.under25 },
-                              ].map(({ key, odds }) => (
-                                <button
-                                  key={key}
-                                  onClick={() => handleOddsClick(match, key, odds)}
-                                  className={`flex justify-between items-center py-2 px-3 rounded-lg border text-sm transition-all ${
-                                    isSelected(match.id, key)
-                                      ? "bg-primary text-primary-foreground border-primary"
-                                      : "bg-secondary border-border text-foreground hover:border-primary/50"
-                                  }`}
-                                >
-                                  <span className="text-xs">{key}</span>
-                                  <span className="font-bold">{odds.toFixed(2)}</span>
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-
-                        {match.doubleChance && (
-                          <div>
-                            <span className="text-xs text-muted-foreground mb-1.5 block font-medium">Çifte Şans</span>
-                            <div className="grid grid-cols-3 gap-2">
-                              {[
-                                { key: "1X", odds: match.doubleChance.homeOrDraw },
-                                { key: "X2", odds: match.doubleChance.awayOrDraw },
-                                { key: "12", odds: match.doubleChance.homeOrAway },
-                              ].map(({ key, odds }) => (
-                                <button
-                                  key={key}
-                                  onClick={() => handleOddsClick(match, `Çifte Şans: ${key}`, odds)}
-                                  className={`flex flex-col items-center py-2 px-2 rounded-lg border text-sm transition-all ${
-                                    isSelected(match.id, `Çifte Şans: ${key}`)
-                                      ? "bg-primary text-primary-foreground border-primary"
-                                      : "bg-secondary border-border text-foreground hover:border-primary/50"
-                                  }`}
-                                >
-                                  <span className="text-[10px] text-muted-foreground mb-0.5 font-normal">{key}</span>
-                                  <span className="font-bold">{odds.toFixed(2)}</span>
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="text-center py-2">
-                    <span className="text-xs text-muted-foreground">Oran bilgisi mevcut değil</span>
-                  </div>
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
