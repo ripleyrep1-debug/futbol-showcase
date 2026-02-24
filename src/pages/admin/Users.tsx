@@ -9,15 +9,20 @@ import {
   Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from "@/components/ui/table";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter,
+  Dialog, DialogContent, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { Search, Ban, CheckCircle, Wallet, Eye } from "lucide-react";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Search, Ban, CheckCircle, Wallet, Eye, Trash2, ShieldCheck, ShieldOff, KeyRound } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 const Users = () => {
   const [search, setSearch] = useState("");
   const [detailUser, setDetailUser] = useState<any>(null);
   const [balanceInput, setBalanceInput] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<any>(null);
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
@@ -33,16 +38,22 @@ const Users = () => {
     },
   });
 
+  const { data: allRoles } = useQuery({
+    queryKey: ["admin-user-roles"],
+    queryFn: async () => {
+      const { data } = await supabase.from("user_roles").select("*");
+      return data ?? [];
+    },
+  });
+
   const { data: userBets } = useQuery({
     queryKey: ["admin-user-bets", detailUser?.id],
     enabled: !!detailUser,
     queryFn: async () => {
       const { data } = await supabase
-        .from("bets")
-        .select("*")
+        .from("bets").select("*")
         .eq("user_id", detailUser.id)
-        .order("created_at", { ascending: false })
-        .limit(20);
+        .order("created_at", { ascending: false }).limit(20);
       return data ?? [];
     },
   });
@@ -52,14 +63,15 @@ const Users = () => {
     enabled: !!detailUser,
     queryFn: async () => {
       const { data } = await supabase
-        .from("transactions")
-        .select("*")
+        .from("transactions").select("*")
         .eq("user_id", detailUser.id)
-        .order("created_at", { ascending: false })
-        .limit(20);
+        .order("created_at", { ascending: false }).limit(20);
       return data ?? [];
     },
   });
+
+  const getUserRoles = (userId: string) => (allRoles ?? []).filter((r: any) => r.user_id === userId).map((r: any) => r.role);
+  const isAdmin = (userId: string) => getUserRoles(userId).includes("admin");
 
   const toggleStatus = useMutation({
     mutationFn: async ({ id, newStatus }: { id: string; newStatus: string }) => {
@@ -78,8 +90,7 @@ const Users = () => {
       const { error } = await supabase.from("profiles").update({ balance }).eq("id", id);
       if (error) throw error;
       await supabase.from("transactions").insert({
-        user_id: id,
-        type: "deposit",
+        user_id: id, type: "deposit",
         amount: balance - Number(detailUser.balance),
         description: "Admin tarafından bakiye düzenleme",
       });
@@ -88,6 +99,32 @@ const Users = () => {
       queryClient.invalidateQueries({ queryKey: ["admin-users"] });
       queryClient.invalidateQueries({ queryKey: ["admin-stats"] });
       toast({ title: "Başarılı", description: "Bakiye güncellendi." });
+    },
+    onError: (err: Error) => toast({ title: "Hata", description: err.message, variant: "destructive" }),
+  });
+
+  const adminAction = useMutation({
+    mutationFn: async (body: Record<string, any>) => {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admin-manage-user`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify(body),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error || "İşlem başarısız");
+      return json;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ["admin-users"] });
+      queryClient.invalidateQueries({ queryKey: ["admin-user-roles"] });
+      const msg = variables.action === "delete" ? "Kullanıcı silindi." :
+        variables.action === "set_role" ? "Rol güncellendi." : "Şifre sıfırlandı.";
+      toast({ title: "Başarılı", description: msg });
+      if (variables.action === "delete") { setDeleteTarget(null); setDetailUser(null); }
     },
     onError: (err: Error) => toast({ title: "Hata", description: err.message, variant: "destructive" }),
   });
@@ -109,12 +146,12 @@ const Users = () => {
     <div className="p-6 space-y-6">
       <div>
         <h1 className="text-3xl font-display font-bold text-foreground">Kullanıcılar</h1>
-        <p className="text-muted-foreground mt-1">Tüm kullanıcıları yönetin</p>
+        <p className="text-muted-foreground mt-1">Kullanıcıları yönetin, sil, rol ata, bakiye düzenle</p>
       </div>
 
       <Card className="border-border">
         <CardHeader className="flex flex-row items-center justify-between">
-          <CardTitle className="text-lg">Kullanıcı Listesi</CardTitle>
+          <CardTitle className="text-lg">Kullanıcı Listesi ({filtered.length})</CardTitle>
           <div className="relative w-64">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Kullanıcı ara..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-9" />
@@ -126,6 +163,7 @@ const Users = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Kullanıcı</TableHead>
+                  <TableHead>Rol</TableHead>
                   <TableHead>Bakiye</TableHead>
                   <TableHead>Durum</TableHead>
                   <TableHead>Kayıt Tarihi</TableHead>
@@ -135,7 +173,7 @@ const Users = () => {
               <TableBody>
                 {filtered.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={5} className="text-center text-muted-foreground">Kullanıcı bulunamadı</TableCell>
+                    <TableCell colSpan={6} className="text-center text-muted-foreground">Kullanıcı bulunamadı</TableCell>
                   </TableRow>
                 ) : (
                   filtered.map((user) => (
@@ -146,6 +184,11 @@ const Users = () => {
                           <p className="text-xs text-muted-foreground">{user.id.slice(0, 8)}...</p>
                         </div>
                       </TableCell>
+                      <TableCell>
+                        <Badge variant={isAdmin(user.id) ? "default" : "secondary"} className="text-xs">
+                          {isAdmin(user.id) ? "Admin" : "Kullanıcı"}
+                        </Badge>
+                      </TableCell>
                       <TableCell className="font-semibold text-foreground">₺{Number(user.balance).toLocaleString("tr-TR")}</TableCell>
                       <TableCell>
                         <Badge variant={user.status === "active" ? "default" : "destructive"} className="text-xs">
@@ -154,13 +197,20 @@ const Users = () => {
                       </TableCell>
                       <TableCell className="text-muted-foreground">{new Date(user.created_at).toLocaleDateString("tr-TR")}</TableCell>
                       <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
+                        <div className="flex items-center justify-end gap-1 flex-wrap">
                           <Button size="sm" variant="outline" onClick={() => { setDetailUser(user); setBalanceInput(String(user.balance)); }}>
                             <Eye className="h-4 w-4 mr-1" /> Detay
                           </Button>
                           <Button size="sm" variant={user.status === "active" ? "destructive" : "default"}
                             onClick={() => toggleStatus.mutate({ id: user.id, newStatus: user.status === "active" ? "suspended" : "active" })}>
                             {user.status === "active" ? <><Ban className="h-4 w-4 mr-1" /> Askıya Al</> : <><CheckCircle className="h-4 w-4 mr-1" /> Aktifleştir</>}
+                          </Button>
+                          <Button size="sm" variant="outline"
+                            onClick={() => adminAction.mutate({ action: "set_role", userId: user.id, role: isAdmin(user.id) ? "user" : "admin" })}>
+                            {isAdmin(user.id) ? <><ShieldOff className="h-4 w-4 mr-1" /> Admin Kaldır</> : <><ShieldCheck className="h-4 w-4 mr-1" /> Admin Yap</>}
+                          </Button>
+                          <Button size="sm" variant="destructive" onClick={() => setDeleteTarget(user)}>
+                            <Trash2 className="h-4 w-4 mr-1" /> Sil
                           </Button>
                         </div>
                       </TableCell>
@@ -173,13 +223,49 @@ const Users = () => {
         </CardContent>
       </Card>
 
+      {/* Delete Confirmation */}
+      <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
+        <AlertDialogContent className="border-border bg-card">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Kullanıcıyı Sil</AlertDialogTitle>
+            <AlertDialogDescription>
+              <strong>{deleteTarget?.display_name}</strong> adlı kullanıcıyı silmek istediğinize emin misiniz? Bu işlem geri alınamaz. Tüm bahisleri, işlemleri ve ödeme talepleri de silinecektir.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>İptal</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => deleteTarget && adminAction.mutate({ action: "delete", userId: deleteTarget.id })}>
+              Evet, Sil
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* User Detail Modal */}
       <Dialog open={!!detailUser} onOpenChange={() => setDetailUser(null)}>
         <DialogContent className="border-border bg-card max-w-2xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>{detailUser?.display_name || "Kullanıcı"} — Detay</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              {detailUser?.display_name || "Kullanıcı"} — Detay
+              {detailUser && isAdmin(detailUser.id) && <Badge variant="default" className="text-xs">Admin</Badge>}
+            </DialogTitle>
           </DialogHeader>
           <div className="space-y-6">
+            {/* Quick actions */}
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="outline" onClick={() => detailUser && adminAction.mutate({ action: "reset_password", userId: detailUser.id })}>
+                <KeyRound className="h-4 w-4 mr-1" /> Şifre Sıfırla
+              </Button>
+              <Button size="sm" variant="outline"
+                onClick={() => detailUser && adminAction.mutate({ action: "set_role", userId: detailUser.id, role: isAdmin(detailUser.id) ? "user" : "admin" })}>
+                {detailUser && isAdmin(detailUser.id) ? <><ShieldOff className="h-4 w-4 mr-1" /> Admin Kaldır</> : <><ShieldCheck className="h-4 w-4 mr-1" /> Admin Yap</>}
+              </Button>
+              <Button size="sm" variant="destructive" onClick={() => { setDeleteTarget(detailUser); }}>
+                <Trash2 className="h-4 w-4 mr-1" /> Kullanıcıyı Sil
+              </Button>
+            </div>
+
             {/* Balance edit */}
             <Card className="border-border">
               <CardHeader className="pb-2">
