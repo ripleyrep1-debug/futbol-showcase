@@ -549,7 +549,7 @@ const Roulette = () => {
 
         {/* Chip Selector */}
         <div className="flex justify-center gap-1 sm:gap-1.5 mb-2">
-          {CHIPS.filter(c => c <= maxBet).map(chip => (
+          {CHIPS.filter(c => c >= minBet && c <= maxBet).map(chip => (
             <button key={chip} onClick={() => { setSelectedChip(chip); sfx.play("chip"); }} disabled={spinning}
               className={`w-9 h-9 sm:w-11 sm:h-11 rounded-full border-[2.5px] font-bold text-[8px] sm:text-[10px] transition-all active:scale-90
                 ${selectedChip === chip
