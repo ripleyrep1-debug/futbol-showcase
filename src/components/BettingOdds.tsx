@@ -25,6 +25,7 @@ interface ParsedMatch {
   league: string;
   leagueLogo: string;
   leagueFlag: string | null;
+  leagueCountry: string;
   homeTeam: string;
   awayTeam: string;
   homeLogo: string;
@@ -49,6 +50,7 @@ function buildMatches(fixtures: ApiFixture[], oddsMap: Map<number, ApiOddsRespon
       league: f.league.name,
       leagueLogo: f.league.logo,
       leagueFlag: f.league.flag,
+      leagueCountry: f.league.country,
       homeTeam: f.teams.home.name,
       awayTeam: f.teams.away.name,
       homeLogo: f.teams.home.logo,
@@ -425,6 +427,10 @@ const BettingOdds = ({ onAddBet, selectedBets }: BettingOddsProps) => {
       else if (activeFilter === "popular") filtered = [...allMatches].sort((a, b) => b.allBets.length - a.allBets.length);
       if (activeFilter !== "all") filtered = filtered.filter((m) => m.allBets.length > 0);
     }
+
+    // Always sort Turkish matches to the top
+    const isTurkish = (m: ParsedMatch) => m.leagueCountry === "Turkey" ? 0 : 1;
+    filtered = [...filtered].sort((a, b) => isTurkish(a) - isTurkish(b));
 
     return filtered.slice(0, 50);
   }, [allMatches, activeFilter, searchQuery]);
