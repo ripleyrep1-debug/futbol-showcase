@@ -35,7 +35,7 @@ const Header = ({ onToggleSidebar }: HeaderProps) => {
         .from("profiles")
         .select("balance, display_name")
         .eq("id", user!.id)
-        .single();
+        .maybeSingle();
       if (error) throw error;
       return data;
     },
