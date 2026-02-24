@@ -45,6 +45,19 @@ const AdminSidebar = () => {
     refetchInterval: 30000,
   });
 
+  const { data: openSupportCount = 0 } = useQuery({
+    queryKey: ["admin-open-support-count"],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from("support_conversations")
+        .select("*", { count: "exact", head: true })
+        .eq("status", "open");
+      if (error) throw error;
+      return count ?? 0;
+    },
+    refetchInterval: 15000,
+  });
+
   const navGroups: NavGroup[] = [
     {
       label: "GENEL",
@@ -78,7 +91,7 @@ const AdminSidebar = () => {
     {
       label: "DESTEK",
       items: [
-        { label: "Canlı Destek", to: "/admin/destek", icon: Headphones },
+        { label: "Canlı Destek", to: "/admin/destek", icon: Headphones, badge: openSupportCount },
       ],
     },
     {

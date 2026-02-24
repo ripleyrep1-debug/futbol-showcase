@@ -273,17 +273,19 @@ const Support = () => {
                 {messages.map((m) => (
                   <div
                     key={m.id}
-                    className={`flex ${m.sender_type === "admin" ? "justify-end" : "justify-start"}`}
+                    className={`flex ${m.sender_type === "admin" || m.sender_type === "bot" ? "justify-end" : "justify-start"}`}
                   >
                     <div
                       className={`max-w-[70%] rounded-lg px-3 py-2 text-sm ${
                         m.sender_type === "admin"
                           ? "bg-primary text-primary-foreground"
+                          : m.sender_type === "bot"
+                          ? "bg-accent/20 text-accent-foreground border border-accent/30"
                           : "bg-secondary text-secondary-foreground"
                       }`}
                     >
                       <p className="text-[10px] font-bold mb-0.5 opacity-70">
-                        {m.sender_type === "admin" ? "Admin" : selectedConversation?.user_name || "Kullanıcı"}
+                        {m.sender_type === "admin" ? "Admin" : m.sender_type === "bot" ? "🤖 AI Asistan" : selectedConversation?.user_name || "Kullanıcı"}
                       </p>
                       <p>{m.message}</p>
                       <p className="text-[10px] mt-1 opacity-50">
