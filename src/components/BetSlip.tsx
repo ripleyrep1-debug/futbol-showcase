@@ -75,7 +75,7 @@ const BetSlip = ({ bets, onRemoveBet, onClearAll }: BetSlipProps) => {
   return (
     <>
       {/* Mobile toggle bar */}
-      <div className="fixed bottom-14 left-0 right-0 z-50 lg:hidden">
+      <div className="fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom))] left-0 right-0 z-50 lg:hidden">
         <button
           onClick={() => setIsOpen(!isOpen)}
           className="w-full flex items-center justify-between px-4 py-3 bg-primary text-primary-foreground font-bold"
@@ -91,7 +91,7 @@ const BetSlip = ({ bets, onRemoveBet, onClearAll }: BetSlipProps) => {
         </button>
 
         {isOpen && (
-          <div className="bg-card border-t border-border max-h-[65vh] overflow-y-auto p-3 space-y-2">
+          <div className="bg-card border-t border-border max-h-[50vh] overflow-y-auto p-3 space-y-2 shadow-2xl">
             <SlipContent
               bets={bets}
               onRemoveBet={onRemoveBet}
