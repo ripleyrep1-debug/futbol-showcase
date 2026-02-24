@@ -78,7 +78,7 @@ const FootballWidgets = () => {
           <span className="inline-block w-1 h-7 rounded-full bg-accent" />
           Tüm Ligler
         </h2>
-        <div className="rounded-xl border border-border overflow-hidden">
+        <div className="rounded-xl border border-border overflow-hidden max-h-[400px] sm:max-h-[500px] overflow-y-auto">
           <Widget attrs={{
             "data-type": "leagues",
             "data-target-league": "modal",
