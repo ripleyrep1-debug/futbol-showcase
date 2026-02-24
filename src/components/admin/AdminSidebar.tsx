@@ -1,10 +1,10 @@
+import { useState } from "react";
 import { NavLink } from "react-router-dom";
 import {
   LayoutDashboard, Users, Trophy, CreditCard, Settings, LogOut,
   ChevronLeft, ChevronRight, TrendingUp, ExternalLink, BarChart3,
-  Database, History, FileText, ToggleLeft, Headphones,
+  Database, History, FileText, ToggleLeft, Headphones, Menu, X,
 } from "lucide-react";
-import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { supabase } from "@/integrations/supabase/client";
@@ -23,6 +23,7 @@ interface NavGroup {
 
 const AdminSidebar = () => {
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const { signOut } = useAuth();
 
   const { data: pendingBets = 0 } = useQuery({
@@ -103,19 +104,28 @@ const AdminSidebar = () => {
     },
   ];
 
-  return (
-    <aside className={`sticky top-0 h-screen flex flex-col border-r border-border bg-card transition-all duration-300 ${collapsed ? "w-16" : "w-64"}`}>
+  const totalBadge = pendingBets + pendingPayments + openSupportCount;
+
+  const sidebarContent = (isMobile: boolean) => (
+    <>
       {/* Logo */}
-      <div className="flex items-center gap-3 px-4 h-16 border-b border-border shrink-0">
-        <img src={bluebetLogo} alt="BlueBet" className="h-8 w-8 shrink-0" />
-        {!collapsed && <span className="font-display text-lg font-bold text-primary">BLUE<span className="text-accent">BET</span></span>}
+      <div className="flex items-center justify-between px-4 h-16 border-b border-border shrink-0">
+        <div className="flex items-center gap-3">
+          <img src={bluebetLogo} alt="BlueBet" className="h-8 w-8 shrink-0" />
+          {(!collapsed || isMobile) && <span className="font-display text-lg font-bold text-primary">BLUE<span className="text-accent">BET</span></span>}
+        </div>
+        {isMobile && (
+          <button onClick={() => setMobileOpen(false)} className="p-1.5 rounded-lg text-muted-foreground hover:text-foreground">
+            <X className="h-5 w-5" />
+          </button>
+        )}
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 py-3 overflow-y-auto">
         {navGroups.map((group) => (
           <div key={group.label} className="mb-4">
-            {!collapsed && (
+            {(!collapsed || isMobile) && (
               <div className="px-4 mb-2">
                 <span className="text-[10px] font-bold tracking-widest text-muted-foreground/60 uppercase">
                   {group.label}
@@ -128,6 +138,7 @@ const AdminSidebar = () => {
                   key={item.to}
                   to={item.to}
                   end={item.end}
+                  onClick={() => isMobile && setMobileOpen(false)}
                   className={({ isActive }) =>
                     `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors relative ${
                       isActive
@@ -137,9 +148,9 @@ const AdminSidebar = () => {
                   }
                 >
                   <item.icon className="h-5 w-5 shrink-0" />
-                  {!collapsed && <span>{item.label}</span>}
+                  {(!collapsed || isMobile) && <span>{item.label}</span>}
                   {(item.badge ?? 0) > 0 && (
-                    <span className={`${collapsed ? "absolute -top-1 -right-1" : "ml-auto"} bg-destructive text-destructive-foreground text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5`}>
+                    <span className={`${collapsed && !isMobile ? "absolute -top-1 -right-1" : "ml-auto"} bg-destructive text-destructive-foreground text-xs font-bold rounded-full min-w-[20px] h-5 flex items-center justify-center px-1.5`}>
                       {item.badge}
                     </span>
                   )}
@@ -154,18 +165,58 @@ const AdminSidebar = () => {
       <div className="border-t border-border p-2 space-y-0.5">
         <a href="/" target="_blank" rel="noopener noreferrer" className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors w-full">
           <ExternalLink className="h-5 w-5 shrink-0" />
-          {!collapsed && <span>Siteye Git</span>}
+          {(!collapsed || isMobile) && <span>Siteye Git</span>}
         </a>
         <button onClick={signOut} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-destructive hover:bg-destructive/10 transition-colors w-full">
           <LogOut className="h-5 w-5 shrink-0" />
-          {!collapsed && <span>Çıkış Yap</span>}
+          {(!collapsed || isMobile) && <span>Çıkış Yap</span>}
         </button>
-        <button onClick={() => setCollapsed(!collapsed)} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors w-full">
-          {collapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
-          {!collapsed && <span>Daralt</span>}
+        {!isMobile && (
+          <button onClick={() => setCollapsed(!collapsed)} className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors w-full">
+            {collapsed ? <ChevronRight className="h-5 w-5" /> : <ChevronLeft className="h-5 w-5" />}
+            {!collapsed && <span>Daralt</span>}
+          </button>
+        )}
+      </div>
+    </>
+  );
+
+  return (
+    <>
+      {/* Mobile top bar */}
+      <div className="lg:hidden fixed top-0 left-0 right-0 z-50 h-14 bg-card border-b border-border flex items-center justify-between px-4">
+        <div className="flex items-center gap-3">
+          <img src={bluebetLogo} alt="BlueBet" className="h-8 w-8" />
+          <span className="font-display text-lg font-bold text-primary">BLUE<span className="text-accent">BET</span></span>
+        </div>
+        <button
+          onClick={() => setMobileOpen(true)}
+          className="relative p-2 rounded-lg border border-border text-foreground hover:bg-secondary transition-colors"
+        >
+          <Menu className="h-5 w-5" />
+          {totalBadge > 0 && (
+            <span className="absolute -top-1 -right-1 bg-destructive text-destructive-foreground text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
+              {totalBadge}
+            </span>
+          )}
         </button>
       </div>
-    </aside>
+
+      {/* Mobile overlay sidebar */}
+      {mobileOpen && (
+        <div className="lg:hidden fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setMobileOpen(false)} />
+          <aside className="absolute left-0 top-0 bottom-0 w-72 bg-card flex flex-col shadow-2xl animate-in slide-in-from-left duration-200">
+            {sidebarContent(true)}
+          </aside>
+        </div>
+      )}
+
+      {/* Desktop sidebar */}
+      <aside className={`hidden lg:flex sticky top-0 h-screen flex-col border-r border-border bg-card transition-all duration-300 ${collapsed ? "w-16" : "w-64"}`}>
+        {sidebarContent(false)}
+      </aside>
+    </>
   );
 };
 
