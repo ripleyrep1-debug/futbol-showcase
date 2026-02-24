@@ -7,6 +7,10 @@ import { AuthProvider } from "@/hooks/useAuth";
 import Index from "./pages/Index";
 import MyBets from "./pages/MyBets";
 import NotFound from "./pages/NotFound";
+import FAQ from "./pages/FAQ";
+import Contact from "./pages/Contact";
+import Rules from "./pages/Rules";
+import Privacy from "./pages/Privacy";
 import AdminLayout from "./components/admin/AdminLayout";
 import Dashboard from "./pages/admin/Dashboard";
 import Users from "./pages/admin/Users";
@@ -19,6 +23,7 @@ import DataManagement from "./pages/admin/DataManagement";
 import TransactionHistory from "./pages/admin/TransactionHistory";
 import BetHistory from "./pages/admin/BetHistory";
 import BetTypeSettings from "./pages/admin/BetTypeSettings";
+import LiveSupportChat from "./components/LiveSupportChat";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +37,10 @@ const App = () => (
           <Routes>
             <Route path="/" element={<Index />} />
             <Route path="/bahislerim" element={<MyBets />} />
+            <Route path="/sss" element={<FAQ />} />
+            <Route path="/iletisim" element={<Contact />} />
+            <Route path="/kurallar" element={<Rules />} />
+            <Route path="/gizlilik" element={<Privacy />} />
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<Dashboard />} />
               <Route path="kullanicilar" element={<Users />} />
@@ -47,6 +56,7 @@ const App = () => (
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
+          <LiveSupportChat />
         </AuthProvider>
       </BrowserRouter>
     </TooltipProvider>
