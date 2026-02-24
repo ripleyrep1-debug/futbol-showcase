@@ -243,14 +243,23 @@ const Roulette = () => {
 
   const numBg = (n: number) => n === 0 ? "bg-green-600" : RED_NUMBERS.includes(n) ? "bg-red-600" : "bg-gray-900";
 
-  // Chip overlay on bet cells
-  const ChipOverlay = ({ amount }: { amount: number }) => amount > 0 ? (
-    <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
-      <div className="w-5 h-5 sm:w-6 sm:h-6 rounded-full bg-accent border-2 border-accent-foreground flex items-center justify-center shadow-lg">
-        <span className="text-[7px] sm:text-[8px] font-black text-accent-foreground">{amount >= 1000 ? `${(amount/1000).toFixed(0)}k` : amount}</span>
+  // Chip overlay — realistic stacked chip look
+  const ChipOverlay = ({ amount }: { amount: number }) => {
+    if (amount <= 0) return null;
+    const label = amount >= 1000 ? `${(amount/1000).toFixed(amount >= 10000 ? 0 : 1)}k` : String(amount);
+    return (
+      <div className="absolute -top-1 -right-1 z-20 pointer-events-none animate-scale-in">
+        <div className="relative">
+          {/* Shadow chip behind */}
+          <div className="absolute inset-0 translate-x-[1px] translate-y-[1px] w-[22px] h-[22px] rounded-full bg-black/40" />
+          {/* Main chip */}
+          <div className="w-[22px] h-[22px] rounded-full bg-gradient-to-br from-accent to-primary border-[2px] border-white/80 flex items-center justify-center shadow-[0_2px_8px_rgba(0,0,0,0.5)]">
+            <span className="text-[7px] font-black text-white drop-shadow-sm leading-none">{label}</span>
+          </div>
+        </div>
       </div>
-    </div>
-  ) : null;
+    );
+  };
 
   if (!user) {
     return (
@@ -397,36 +406,36 @@ const Roulette = () => {
           </div>
         )}
 
-        {/* Betting Table — Mobile Optimized */}
-        <div className="bg-card border border-border rounded-xl p-1.5 sm:p-2 mb-2">
-          {/* Zero */}
-          <div className="mb-1">
+        {/* Betting Table — Mobile Optimized, no scroll needed */}
+        <div className="bg-card border border-border rounded-xl p-1 sm:p-2 mb-2">
+          {/* Zero — full width */}
+          <div className="mb-[2px]">
             <button
               onClick={() => placeBet({ kind: "straight", number: 0 }, "0")}
               disabled={spinning}
-              className={`relative w-full h-8 rounded bg-green-700 hover:bg-green-600 text-white font-bold text-xs border border-green-500/30 transition-all
-                ${getBetAmount({ kind: "straight", number: 0 }) > 0 ? "ring-2 ring-accent" : ""}
-                ${spinning ? "opacity-50 cursor-not-allowed" : "active:scale-[0.98]"}`}
+              className={`relative w-full h-8 rounded-sm bg-green-700 hover:bg-green-600 text-white font-bold text-xs border border-green-500/30 transition-all
+                ${spinning ? "opacity-50 cursor-not-allowed" : "active:scale-[0.98] active:brightness-110"}`}
             >
               0
               <ChipOverlay amount={getBetAmount({ kind: "straight", number: 0 })} />
             </button>
           </div>
 
-          {/* Number Grid — 6 cols fits mobile */}
-          <div className="grid grid-cols-6 gap-[2px] mb-1">
+          {/* Number Grid — 6 cols, tap-friendly */}
+          <div className="grid grid-cols-6 gap-[1px] mb-[2px]">
             {mobileGrid.flat().map(n => {
               const betAmt = getBetAmount({ kind: "straight", number: n });
+              const isRed = RED_NUMBERS.includes(n);
               return (
                 <button
                   key={n}
                   onClick={() => placeBet({ kind: "straight", number: n }, String(n))}
                   disabled={spinning}
-                  className={`relative h-9 sm:h-10 rounded text-[11px] sm:text-xs font-bold text-white transition-all border
-                    ${RED_NUMBERS.includes(n) ? "bg-red-700 hover:bg-red-600 border-red-500/20" : "bg-gray-800 hover:bg-gray-700 border-gray-600/20"}
-                    ${betAmt > 0 ? "ring-2 ring-accent" : ""}
-                    ${spinning ? "opacity-50 cursor-not-allowed" : "active:scale-[0.95]"}
+                  className={`relative h-[38px] rounded-sm font-bold text-white transition-all border
+                    ${isRed ? "bg-red-700 border-red-600/40 active:bg-red-500" : "bg-[#1e293b] border-gray-600/30 active:bg-gray-600"}
+                    ${spinning ? "opacity-50 cursor-not-allowed" : "active:scale-[0.93]"}
                   `}
+                  style={{ fontSize: "11px" }}
                 >
                   {n}
                   <ChipOverlay amount={betAmt} />
@@ -435,14 +444,14 @@ const Roulette = () => {
             })}
           </div>
 
-          {/* Dozens */}
-          <div className="grid grid-cols-3 gap-[2px] mb-1">
+          {/* Dozens row */}
+          <div className="grid grid-cols-3 gap-[1px] mb-[2px]">
             {([1, 2, 3] as const).map(d => {
               const betAmt = getBetAmount({ kind: "dozen", dozen: d });
               return (
                 <button key={d} onClick={() => placeBet({ kind: "dozen", dozen: d }, `${d}. Düzine`)} disabled={spinning}
-                  className={`relative h-8 rounded text-[10px] sm:text-xs font-bold bg-secondary hover:bg-secondary/80 text-foreground border border-border transition-all
-                    ${betAmt > 0 ? "ring-2 ring-accent" : ""} ${spinning ? "opacity-50 cursor-not-allowed" : "active:scale-[0.97]"}`}>
+                  className={`relative h-[32px] rounded-sm text-[10px] font-bold bg-secondary hover:bg-secondary/80 text-foreground border border-border transition-all
+                    ${spinning ? "opacity-50 cursor-not-allowed" : "active:scale-[0.97]"}`}>
                   {d === 1 ? "1-12" : d === 2 ? "13-24" : "25-36"}
                   <ChipOverlay amount={betAmt} />
                 </button>
@@ -450,36 +459,35 @@ const Roulette = () => {
             })}
           </div>
 
-          {/* Columns */}
-          <div className="grid grid-cols-3 gap-[2px] mb-1">
-            {([1, 2, 3] as const).map(c => {
-              const betAmt = getBetAmount({ kind: "column", column: c });
+          {/* Outside Bets — 2 rows of 3 for easy tapping */}
+          <div className="grid grid-cols-3 gap-[1px] mb-[2px]">
+            {[
+              { type: { kind: "red" as const }, label: "🔴 Kırmızı", cls: "bg-red-700 text-white border-red-600/40 active:bg-red-500" },
+              { type: { kind: "black" as const }, label: "⚫ Siyah", cls: "bg-[#1e293b] text-white border-gray-600/30 active:bg-gray-600" },
+              { type: { kind: "even" as const }, label: "Çift", cls: "bg-secondary text-foreground border-border" },
+            ].map(({ type, label, cls }) => {
+              const betAmt = getBetAmount(type);
               return (
-                <button key={c} onClick={() => placeBet({ kind: "column", column: c }, `Sütun ${c}`)} disabled={spinning}
-                  className={`relative h-8 rounded text-[10px] sm:text-xs font-bold bg-secondary hover:bg-secondary/80 text-foreground border border-border transition-all
-                    ${betAmt > 0 ? "ring-2 ring-accent" : ""} ${spinning ? "opacity-50 cursor-not-allowed" : "active:scale-[0.97]"}`}>
-                  Sütun {c} (2:1)
+                <button key={label} onClick={() => placeBet(type, label)} disabled={spinning}
+                  className={`relative h-[34px] rounded-sm text-[10px] font-bold transition-all border ${cls}
+                    ${spinning ? "opacity-50 cursor-not-allowed" : "active:scale-[0.97]"}`}>
+                  {label}
                   <ChipOverlay amount={betAmt} />
                 </button>
               );
             })}
           </div>
-
-          {/* Outside Bets — 2 rows of 3 */}
-          <div className="grid grid-cols-3 gap-[2px]">
+          <div className="grid grid-cols-3 gap-[1px]">
             {[
-              { type: { kind: "red" as const }, label: "🔴 Kırmızı", cls: "bg-red-700 hover:bg-red-600 text-white border-red-500/20" },
-              { type: { kind: "black" as const }, label: "⚫ Siyah", cls: "bg-gray-800 hover:bg-gray-700 text-white border-gray-600/20" },
-              { type: { kind: "even" as const }, label: "Çift", cls: "bg-secondary hover:bg-secondary/80 text-foreground border-border" },
-              { type: { kind: "odd" as const }, label: "Tek", cls: "bg-secondary hover:bg-secondary/80 text-foreground border-border" },
-              { type: { kind: "low" as const }, label: "1-18", cls: "bg-secondary hover:bg-secondary/80 text-foreground border-border" },
-              { type: { kind: "high" as const }, label: "19-36", cls: "bg-secondary hover:bg-secondary/80 text-foreground border-border" },
+              { type: { kind: "odd" as const }, label: "Tek", cls: "bg-secondary text-foreground border-border" },
+              { type: { kind: "low" as const }, label: "1-18", cls: "bg-secondary text-foreground border-border" },
+              { type: { kind: "high" as const }, label: "19-36", cls: "bg-secondary text-foreground border-border" },
             ].map(({ type, label, cls }) => {
               const betAmt = getBetAmount(type);
               return (
                 <button key={label} onClick={() => placeBet(type, label)} disabled={spinning}
-                  className={`relative h-9 rounded text-[10px] sm:text-xs font-bold transition-all border ${cls}
-                    ${betAmt > 0 ? "ring-2 ring-accent" : ""} ${spinning ? "opacity-50 cursor-not-allowed" : "active:scale-[0.97]"}`}>
+                  className={`relative h-[34px] rounded-sm text-[10px] font-bold transition-all border ${cls}
+                    ${spinning ? "opacity-50 cursor-not-allowed" : "active:scale-[0.97]"}`}>
                   {label}
                   <ChipOverlay amount={betAmt} />
                 </button>
