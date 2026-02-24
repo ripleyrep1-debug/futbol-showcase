@@ -1,5 +1,6 @@
-import { useState } from "react";
-import { Star, Search, ChevronRight, Trophy, Zap } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Star, Search, ChevronRight, Trophy, Zap, Loader2 } from "lucide-react";
+import { fetchTodaysFixtures, type ApiFixture } from "@/lib/api-football";
 
 interface LeagueSidebarProps {
   onLeagueSelect?: (leagueId: string) => void;
@@ -9,7 +10,7 @@ interface LeagueSidebarProps {
 }
 
 const leagues = [
-  { id: "popular", name: "Popüler Maçlar", icon: "🔥", isHeader: true },
+  { id: "popular", name: "Popüler Maçlar", icon: "🔥" },
   { id: "super-lig", name: "Türkiye Süper Lig", icon: "🇹🇷" },
   { id: "premier-league", name: "İngiltere Premier Ligi", icon: "🏴󠁧󠁢󠁥󠁮󠁧󠁿" },
   { id: "la-liga", name: "İspanya LaLiga", icon: "🇪🇸" },
@@ -28,10 +29,59 @@ const leagues = [
   { id: "mls", name: "MLS", icon: "🇺🇸" },
 ];
 
+interface LiveMatch {
+  id: number;
+  homeTeam: string;
+  awayTeam: string;
+  homeLogo: string;
+  awayLogo: string;
+  homeScore: number;
+  awayScore: number;
+  minute: string;
+  league: string;
+}
+
+const LIVE_STATUSES = ["1H", "2H", "HT", "ET", "P", "BT", "LIVE"];
+
 const LeagueSidebar = ({ onLeagueSelect, selectedLeague, isOpen, onClose }: LeagueSidebarProps) => {
   const [search, setSearch] = useState("");
   const [activeTab, setActiveTab] = useState<"sports" | "live">("sports");
   const [favorites, setFavorites] = useState<string[]>(["super-lig", "premier-league"]);
+  const [liveMatches, setLiveMatches] = useState<LiveMatch[]>([]);
+  const [liveLoading, setLiveLoading] = useState(false);
+  const [totalLive, setTotalLive] = useState(0);
+
+  useEffect(() => {
+    const loadLive = async () => {
+      setLiveLoading(true);
+      try {
+        const fixtures = await fetchTodaysFixtures();
+        const live = fixtures
+          .filter((f) => LIVE_STATUSES.includes(f.fixture.status.short))
+          .map((f) => ({
+            id: f.fixture.id,
+            homeTeam: f.teams.home.name,
+            awayTeam: f.teams.away.name,
+            homeLogo: f.teams.home.logo,
+            awayLogo: f.teams.away.logo,
+            homeScore: f.goals.home ?? 0,
+            awayScore: f.goals.away ?? 0,
+            minute: f.fixture.status.short === "HT" ? "DY" : `${f.fixture.status.elapsed}'`,
+            league: f.league.name,
+          }));
+        setLiveMatches(live);
+        setTotalLive(live.length);
+      } catch {
+        // silent
+      } finally {
+        setLiveLoading(false);
+      }
+    };
+
+    loadLive();
+    const interval = setInterval(loadLive, 60 * 1000); // refresh every minute
+    return () => clearInterval(interval);
+  }, []);
 
   const filtered = leagues.filter((l) =>
     l.name.toLowerCase().includes(search.toLowerCase())
@@ -45,7 +95,6 @@ const LeagueSidebar = ({ onLeagueSelect, selectedLeague, isOpen, onClose }: Leag
 
   return (
     <>
-      {/* Mobile overlay */}
       {isOpen && (
         <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={onClose} />
       )}
@@ -78,9 +127,11 @@ const LeagueSidebar = ({ onLeagueSelect, selectedLeague, isOpen, onClose }: Leag
           >
             <Zap className="h-3.5 w-3.5" />
             Canlı
-            <span className="bg-destructive text-destructive-foreground text-[10px] px-1.5 py-0.5 rounded-full font-bold">
-              LIVE
-            </span>
+            {totalLive > 0 && (
+              <span className="bg-destructive text-destructive-foreground text-[10px] px-1.5 py-0.5 rounded-full font-bold min-w-[20px] text-center">
+                {totalLive}
+              </span>
+            )}
           </button>
         </div>
 
@@ -98,52 +149,106 @@ const LeagueSidebar = ({ onLeagueSelect, selectedLeague, isOpen, onClose }: Leag
           </div>
         </div>
 
-        {/* League list */}
+        {/* Content based on active tab */}
         <div className="flex-1 overflow-y-auto">
-          <div className="px-1 py-1">
-            {/* All matches toggle */}
-            <button
-              onClick={() => onLeagueSelect?.("all")}
-              className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
-                selectedLeague === "all" || !selectedLeague
-                  ? "bg-primary/10 text-primary"
-                  : "text-foreground hover:bg-secondary"
-              }`}
-            >
-              <span>Tüm Maçlar</span>
-              <ChevronRight className="h-3.5 w-3.5" />
-            </button>
-
-            {filtered.map((league) => (
+          {activeTab === "sports" ? (
+            <div className="px-1 py-1">
               <button
-                key={league.id}
-                onClick={() => onLeagueSelect?.(league.id)}
-                className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-colors group ${
-                  selectedLeague === league.id
+                onClick={() => onLeagueSelect?.("all")}
+                className={`w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${
+                  selectedLeague === "all" || !selectedLeague
                     ? "bg-primary/10 text-primary"
-                    : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                    : "text-foreground hover:bg-secondary"
                 }`}
               >
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleFav(league.id);
-                  }}
-                  className="shrink-0"
-                >
-                  <Star
-                    className={`h-3.5 w-3.5 transition-colors ${
-                      favorites.includes(league.id)
-                        ? "text-yellow-500 fill-yellow-500"
-                        : "text-muted-foreground/40 group-hover:text-muted-foreground"
-                    }`}
-                  />
-                </button>
-                <span className="text-base shrink-0">{league.icon}</span>
-                <span className="truncate text-left">{league.name}</span>
+                <span>Tüm Maçlar</span>
+                <ChevronRight className="h-3.5 w-3.5" />
               </button>
-            ))}
-          </div>
+
+              {filtered.map((league) => (
+                <button
+                  key={league.id}
+                  onClick={() => onLeagueSelect?.(league.id)}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm transition-colors group ${
+                    selectedLeague === league.id
+                      ? "bg-primary/10 text-primary"
+                      : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                  }`}
+                >
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      toggleFav(league.id);
+                    }}
+                    className="shrink-0"
+                  >
+                    <Star
+                      className={`h-3.5 w-3.5 transition-colors ${
+                        favorites.includes(league.id)
+                          ? "text-yellow-500 fill-yellow-500"
+                          : "text-muted-foreground/40 group-hover:text-muted-foreground"
+                      }`}
+                    />
+                  </button>
+                  <span className="text-base shrink-0">{league.icon}</span>
+                  <span className="truncate text-left">{league.name}</span>
+                </button>
+              ))}
+            </div>
+          ) : (
+            /* Live matches tab */
+            <div className="px-1 py-1">
+              {liveLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-5 w-5 animate-spin text-primary" />
+                </div>
+              ) : liveMatches.length === 0 ? (
+                <div className="text-center py-8 px-3">
+                  <Zap className="h-8 w-8 text-muted-foreground/30 mx-auto mb-2" />
+                  <p className="text-xs text-muted-foreground">Şu anda canlı maç yok</p>
+                </div>
+              ) : (
+                <>
+                  <div className="px-3 py-2">
+                    <span className="text-[10px] uppercase font-bold text-muted-foreground tracking-wider">
+                      Canlı Maçlar ({liveMatches.length})
+                    </span>
+                  </div>
+                  {liveMatches.map((match) => (
+                    <div
+                      key={match.id}
+                      className="mx-1 mb-1.5 rounded-lg bg-secondary/50 border border-border hover:border-primary/30 transition-colors cursor-pointer p-2"
+                    >
+                      {/* League */}
+                      <div className="flex items-center justify-between mb-1.5">
+                        <span className="text-[10px] text-muted-foreground truncate">{match.league}</span>
+                        <span className="text-[10px] font-bold text-destructive flex items-center gap-1">
+                          <span className="w-1.5 h-1.5 rounded-full bg-destructive animate-pulse" />
+                          {match.minute}
+                        </span>
+                      </div>
+                      {/* Home */}
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                          <img src={match.homeLogo} alt="" className="h-4 w-4 object-contain shrink-0" />
+                          <span className="text-xs text-foreground truncate">{match.homeTeam}</span>
+                        </div>
+                        <span className="text-xs font-bold text-foreground ml-2 w-5 text-right">{match.homeScore}</span>
+                      </div>
+                      {/* Away */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 min-w-0 flex-1">
+                          <img src={match.awayLogo} alt="" className="h-4 w-4 object-contain shrink-0" />
+                          <span className="text-xs text-foreground truncate">{match.awayTeam}</span>
+                        </div>
+                        <span className="text-xs font-bold text-foreground ml-2 w-5 text-right">{match.awayScore}</span>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+            </div>
+          )}
         </div>
       </aside>
     </>
