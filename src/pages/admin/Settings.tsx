@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
-import { Save, Settings as SettingsIcon, AlertTriangle, Megaphone, DollarSign, Trophy } from "lucide-react";
+import { Save, AlertTriangle, Megaphone, DollarSign, Trophy, CreditCard, Layers } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { BET_CATEGORIES } from "@/lib/api-football";
 
 const Settings = () => {
   const { toast } = useToast();
@@ -38,6 +39,7 @@ const Settings = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-settings"] });
+      queryClient.invalidateQueries({ queryKey: ["site-settings"] });
       toast({ title: "Kaydedildi" });
     },
     onError: (err: Error) => toast({ title: "Hata", description: err.message, variant: "destructive" }),
@@ -50,6 +52,7 @@ const Settings = () => {
   };
 
   const update = (key: string, value: string) => setValues((prev) => ({ ...prev, [key]: value }));
+  const toggleBool = (key: string) => update(key, values[key] === "true" ? "false" : "true");
 
   if (isLoading) return <div className="p-6 text-muted-foreground">Yükleniyor...</div>;
 
@@ -120,6 +123,75 @@ const Settings = () => {
           </CardContent>
         </Card>
 
+        {/* Payment Settings */}
+        <Card className="border-border">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <CreditCard className="h-5 w-5 text-primary" /> Ödeme Ayarları
+            </CardTitle>
+            <CardDescription>Havale/EFT ve ödeme yöntemleri</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium text-foreground">IBAN ile Yatırım</p>
+                <p className="text-sm text-muted-foreground">Havale/EFT yatırımını aç/kapat</p>
+              </div>
+              <Switch
+                checked={values.iban_payments_enabled !== "false"}
+                onCheckedChange={() => {
+                  const newVal = values.iban_payments_enabled === "false" ? "true" : "false";
+                  update("iban_payments_enabled", newVal);
+                }}
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Site IBAN</label>
+              <Input
+                value={values.site_iban ?? ""}
+                onChange={(e) => update("site_iban", e.target.value)}
+                placeholder="TR00 0000 0000 0000 0000 0000 00"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Hesap Sahibi</label>
+              <Input
+                value={values.site_account_holder ?? ""}
+                onChange={(e) => update("site_account_holder", e.target.value)}
+                placeholder="Ad Soyad / Şirket Adı"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Betting Categories Toggle */}
+        <Card className="border-border">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-lg">
+              <Layers className="h-5 w-5 text-accent" /> Bahis Kategorileri
+            </CardTitle>
+            <CardDescription>Kullanıcıların göreceği bahis türlerini aç/kapat</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {Object.entries(BET_CATEGORIES).map(([key, cat]) => {
+              const settingKey = `bet_category_${key}`;
+              const enabled = values[settingKey] !== "false"; // default true
+              return (
+                <div key={key} className="flex items-center justify-between py-1">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">{cat.label}</p>
+                    <p className="text-xs text-muted-foreground">{cat.betIds.length} bahis türü</p>
+                  </div>
+                  <Switch
+                    checked={enabled}
+                    onCheckedChange={() => update(settingKey, enabled ? "false" : "true")}
+                  />
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
+
         {/* Maintenance Mode */}
         <Card className="border-border">
           <CardHeader>
@@ -136,7 +208,7 @@ const Settings = () => {
               </div>
               <Switch
                 checked={values.maintenance_mode === "true"}
-                onCheckedChange={(checked) => update("maintenance_mode", checked ? "true" : "false")}
+                onCheckedChange={() => toggleBool("maintenance_mode")}
               />
             </div>
           </CardContent>

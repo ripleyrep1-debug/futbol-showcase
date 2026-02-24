@@ -1,8 +1,11 @@
 import { useState } from "react";
-import { Menu, X, User, LogIn, Shield, LogOut } from "lucide-react";
+import { Menu, X, User, LogIn, Shield, LogOut, Wallet } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { supabase } from "@/integrations/supabase/client";
 import AuthModal from "@/components/AuthModal";
+import DepositModal from "@/components/DepositModal";
 import bluebetLogo from "@/assets/bluebet-logo-new.png";
 
 const navLinks = [
@@ -21,12 +24,31 @@ const Header = ({ onToggleSidebar }: HeaderProps) => {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const [authTab, setAuthTab] = useState<"login" | "register">("login");
+  const [depositOpen, setDepositOpen] = useState(false);
   const { user, isAdmin, signOut } = useAuth();
+
+  // Fetch user balance
+  const { data: profile } = useQuery({
+    queryKey: ["user-profile", user?.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("balance, display_name")
+        .eq("id", user!.id)
+        .single();
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!user,
+    refetchInterval: 15000,
+  });
 
   const openAuth = (tab: "login" | "register") => {
     setAuthTab(tab);
     setAuthOpen(true);
   };
+
+  const balance = profile?.balance ?? 0;
 
   return (
     <>
@@ -51,16 +73,24 @@ const Header = ({ onToggleSidebar }: HeaderProps) => {
             <div className="flex items-center gap-2">
               {user ? (
                 <>
+                  {/* Balance Button */}
+                  <button
+                    onClick={() => setDepositOpen(true)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-primary/10 border border-primary/20 hover:bg-primary/20 transition-all"
+                  >
+                    <Wallet className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-bold text-primary">
+                      ₺{balance.toFixed(2)}
+                    </span>
+                  </button>
+
                   {isAdmin && (
-                    <Link to="/admin" className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-lg bg-primary/10 text-primary hover:bg-primary/20 transition-all text-sm font-medium">
+                    <Link to="/admin" className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-accent/10 text-accent hover:bg-accent/20 transition-all text-sm font-medium">
                       <Shield className="h-4 w-4" />
-                      Admin Panel
+                      <span className="hidden md:inline">Admin</span>
                     </Link>
                   )}
-                  <span className="hidden sm:block text-sm text-muted-foreground">
-                    {user.user_metadata?.display_name || "Kullanıcı"}
-                  </span>
-                  <button onClick={signOut} className="flex items-center gap-2 px-3 py-2 rounded-lg border border-border text-foreground hover:border-destructive hover:text-destructive transition-all text-sm font-medium">
+                  <button onClick={signOut} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border text-foreground hover:border-destructive hover:text-destructive transition-all text-sm">
                     <LogOut className="h-4 w-4" />
                     <span className="hidden sm:inline">Çıkış</span>
                   </button>
@@ -111,6 +141,7 @@ const Header = ({ onToggleSidebar }: HeaderProps) => {
       </header>
 
       <AuthModal open={authOpen} onOpenChange={setAuthOpen} defaultTab={authTab} />
+      <DepositModal open={depositOpen} onOpenChange={setDepositOpen} />
     </>
   );
 };
