@@ -73,20 +73,47 @@ async function apiFetch<T>(endpoint: string, params: Record<string, string>): Pr
 }
 
 export async function fetchTodaysFixtures(): Promise<ApiFixture[]> {
-  const today = new Date().toISOString().split("T")[0];
-  return apiFetch<ApiFixture>("fixtures", {
-    date: today,
-    timezone: "Europe/Istanbul",
-  });
+  // Fetch fixtures for today + next 6 days (7 days total)
+  const dates: string[] = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() + i);
+    dates.push(d.toISOString().split("T")[0]);
+  }
+
+  // Fetch all days in parallel
+  const results = await Promise.all(
+    dates.map((date) =>
+      apiFetch<ApiFixture>("fixtures", {
+        date,
+        timezone: "Europe/Istanbul",
+      }).catch(() => [] as ApiFixture[])
+    )
+  );
+
+  return results.flat();
 }
 
 export async function fetchOddsByDate(): Promise<ApiOddsResponse[]> {
-  const today = new Date().toISOString().split("T")[0];
-  return apiFetch<ApiOddsResponse>("odds", {
-    date: today,
-    timezone: "Europe/Istanbul",
-    bookmaker: "8",
-  });
+  // Fetch odds for today + next 2 days (odds usually available only for near-term)
+  const dates: string[] = [];
+  for (let i = 0; i < 3; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() + i);
+    dates.push(d.toISOString().split("T")[0]);
+  }
+
+  const results = await Promise.all(
+    dates.map((date) =>
+      apiFetch<ApiOddsResponse>("odds", {
+        date,
+        timezone: "Europe/Istanbul",
+        bookmaker: "8",
+      }).catch(() => [] as ApiOddsResponse[])
+    )
+  );
+
+  return results.flat();
 }
 
 export async function fetchOddsByFixture(fixtureId: number): Promise<ApiOddsResponse[]> {
