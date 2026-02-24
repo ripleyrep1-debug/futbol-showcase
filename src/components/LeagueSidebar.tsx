@@ -12,7 +12,8 @@ interface LeagueSidebarProps {
 // League IDs match API-Football league IDs, "country:" prefix matches by country
 const leagues = [
   { id: "popular", name: "Popüler Maçlar", icon: "🔥" },
-  { id: "country:Turkey", name: "Türkiye (Tümü)", icon: "🇹🇷" },
+  { id: "turkish_teams", name: "Türk Takımları (Tümü)", icon: "🇹🇷" },
+  { id: "country:Turkey", name: "Türkiye Ligleri", icon: "🇹🇷" },
   { id: "league:203", name: "Süper Lig", icon: "🇹🇷" },
   { id: "league:194", name: "1. Lig", icon: "🇹🇷" },
   { id: "league:552", name: "Türkiye Kupası", icon: "🇹🇷" },
