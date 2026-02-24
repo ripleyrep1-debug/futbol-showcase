@@ -1,4 +1,4 @@
-import bluebetLogo from "@/assets/bluebet-logo-clean.png";
+import bluebetLogo from "@/assets/bluebet-logo-new.png";
 import { Shield, Lock, Headphones } from "lucide-react";
 
 const Footer = () => {

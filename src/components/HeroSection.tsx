@@ -1,5 +1,5 @@
 import { Trophy, Zap, Star, TrendingUp } from "lucide-react";
-import bluebetLogo from "@/assets/bluebet-logo-clean.png";
+import bluebetLogo from "@/assets/bluebet-logo-new.png";
 
 const HeroSection = () => {
   return (
