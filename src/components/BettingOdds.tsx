@@ -511,28 +511,15 @@ const BettingOdds = ({ onAddBet, selectedBets, selectedLeague }: BettingOddsProp
       if (activeFilter === "live") filtered = filtered.filter((m) => m.isLive);
       else if (activeFilter === "upcoming") filtered = filtered.filter((m) => !m.isLive);
       else if (activeFilter === "popular") {
-        // Turkish matches are always popular, plus matches with odds
-        const isTurkish = (m: ParsedMatch) =>
-          m.leagueCountry === "Turkey" || TURKISH_TEAMS.some((t) =>
-            m.homeTeam.toLowerCase().includes(t) || m.awayTeam.toLowerCase().includes(t)
-          );
-        filtered = filtered.filter((m) => m.allBets.length > 0 || isTurkish(m));
-        filtered.sort((a, b) => {
-          const aTR = isTurkish(a) ? 0 : 1;
-          const bTR = isTurkish(b) ? 0 : 1;
-          if (aTR !== bTR) return aTR - bTR;
-          return b.allBets.length - a.allBets.length;
-        });
+        filtered = filtered.filter((m) => m.allBets.length > 0);
+        filtered.sort((a, b) => b.allBets.length - a.allBets.length);
       }
       else if (activeFilter === "all") { /* show all */ }
     }
 
-    // Sort: live first, then Turkish, then by date+time
+    // Sort: live first, then by date+time
     filtered = [...filtered].sort((a, b) => {
       if (a.isLive !== b.isLive) return a.isLive ? -1 : 1;
-      const ta = a.leagueCountry === "Turkey" ? 0 : 1;
-      const tb = b.leagueCountry === "Turkey" ? 0 : 1;
-      if (ta !== tb) return ta - tb;
       if (a.dateStr !== b.dateStr) return a.dateStr.localeCompare(b.dateStr);
       return a.time.localeCompare(b.time);
     });
