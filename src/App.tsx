@@ -27,11 +27,12 @@ import Support from "./pages/admin/Support";
 import LiveSupportChat from "./components/LiveSupportChat";
 import ScrollToTop from "./components/ScrollToTop";
 import Blackjack from "./pages/Blackjack";
+import Roulette from "./pages/Roulette";
 const queryClient = new QueryClient();
 
 const AppContent = () => {
   const location = useLocation();
-  const hideSupport = location.pathname === "/blackjack";
+  const hideSupport = location.pathname === "/blackjack" || location.pathname === "/rulet";
   return (
     <>
       <ScrollToTop />
@@ -43,6 +44,7 @@ const AppContent = () => {
         <Route path="/kurallar" element={<Rules />} />
         <Route path="/gizlilik" element={<Privacy />} />
         <Route path="/blackjack" element={<Blackjack />} />
+        <Route path="/rulet" element={<Roulette />} />
         <Route path="/admin" element={<AdminLayout />}>
           <Route index element={<Dashboard />} />
           <Route path="kullanicilar" element={<Users />} />
