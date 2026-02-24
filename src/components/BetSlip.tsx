@@ -190,7 +190,7 @@ function SlipContent({
         </div>
 
         <div className="flex gap-2">
-          {[10, 25, 50, 100].map((amount) => (
+          {[500, 1000, 2000, 5000].map((amount) => (
             <button
               key={amount}
               onClick={() => setStake(String(amount))}
