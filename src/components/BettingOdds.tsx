@@ -449,9 +449,12 @@ const BettingOdds = ({ onAddBet, selectedBets, selectedLeague }: BettingOddsProp
       oddsArr.forEach((o) => oddsMap.set(o.fixture.id, o));
       return buildMatches(fixtures, oddsMap);
     },
-    staleTime: 2 * 60 * 1000, // 2 minutes
-    refetchInterval: 3 * 60 * 1000, // auto-refresh every 3 minutes
-    refetchOnWindowFocus: true,
+    staleTime: 5 * 60 * 1000, // 5 minutes - keep data fresh longer
+    gcTime: 30 * 60 * 1000, // keep in cache for 30 minutes
+    refetchInterval: 5 * 60 * 1000, // refresh every 5 minutes (avoid rate limits)
+    refetchOnWindowFocus: false, // prevent refetch on tab switch (rate limit)
+    retry: 1,
+    placeholderData: (prev) => prev, // keep previous data during refetch
   });
 
   const error = queryError ? (queryError as Error).message : null;
