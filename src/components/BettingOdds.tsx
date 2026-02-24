@@ -40,31 +40,35 @@ interface ParsedMatch {
   allBets: ApiOddsBet[];
 }
 
+const FINISHED_STATUSES = ["FT", "AET", "PEN", "WO", "AWD", "CANC", "ABD", "INT", "PST", "SUSP"];
+
 function buildMatches(fixtures: ApiFixture[], oddsMap: Map<number, ApiOddsResponse>): ParsedMatch[] {
-  return fixtures.map((f) => {
-    const oddsData = oddsMap.get(f.fixture.id);
-    const allBets = oddsData?.bookmakers?.[0]?.bets || [];
-    const date = new Date(f.fixture.date);
-    const isLive = ["1H", "2H", "HT", "ET", "P", "BT", "LIVE"].includes(f.fixture.status.short);
-    return {
-      id: String(f.fixture.id),
-      fixtureId: f.fixture.id,
-      league: f.league.name,
-      leagueLogo: f.league.logo,
-      leagueFlag: f.league.flag,
-      leagueCountry: f.league.country,
-      homeTeam: f.teams.home.name,
-      awayTeam: f.teams.away.name,
-      homeLogo: f.teams.home.logo,
-      awayLogo: f.teams.away.logo,
-      time: date.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }),
-      isLive,
-      liveMinute: isLive && f.fixture.status.elapsed ? `${f.fixture.status.elapsed}'` : null,
-      homeScore: f.goals.home,
-      awayScore: f.goals.away,
-      allBets,
-    };
-  });
+  return fixtures
+    .filter((f) => !FINISHED_STATUSES.includes(f.fixture.status.short))
+    .map((f) => {
+      const oddsData = oddsMap.get(f.fixture.id);
+      const allBets = oddsData?.bookmakers?.[0]?.bets || [];
+      const date = new Date(f.fixture.date);
+      const isLive = ["1H", "2H", "HT", "ET", "P", "BT", "LIVE"].includes(f.fixture.status.short);
+      return {
+        id: String(f.fixture.id),
+        fixtureId: f.fixture.id,
+        league: f.league.name,
+        leagueLogo: f.league.logo,
+        leagueFlag: f.league.flag,
+        leagueCountry: f.league.country,
+        homeTeam: f.teams.home.name,
+        awayTeam: f.teams.away.name,
+        homeLogo: f.teams.home.logo,
+        awayLogo: f.teams.away.logo,
+        time: date.toLocaleTimeString("tr-TR", { hour: "2-digit", minute: "2-digit" }),
+        isLive,
+        liveMinute: isLive && f.fixture.status.elapsed ? `${f.fixture.status.elapsed}'` : null,
+        homeScore: f.goals.home,
+        awayScore: f.goals.away,
+        allBets,
+      };
+    });
 }
 
 interface BettingOddsProps {
@@ -373,9 +377,6 @@ const OddsChip = ({
 /* ─── Main Component ─── */
 const BettingOdds = ({ onAddBet, selectedBets }: BettingOddsProps) => {
   const [activeFilter, setActiveFilter] = useState<"all" | "live" | "upcoming" | "popular">("popular");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [allMatches, setAllMatches] = useState<ParsedMatch[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -403,29 +404,24 @@ const BettingOdds = ({ onAddBet, selectedBets }: BettingOddsProps) => {
     return disabled;
   }, [siteSettings]);
 
-  const loadData = async () => {
-    setLoading(true);
-    setError(null);
-    try {
+  // Use React Query for match data with proper cache invalidation
+  const { data: allMatches = [], isLoading: loading, error: queryError, refetch: loadData } = useQuery({
+    queryKey: ["betting-matches"],
+    queryFn: async () => {
       const [fixtures, oddsArr] = await Promise.all([
         fetchTodaysFixtures(),
         fetchOddsByDate().catch(() => [] as ApiOddsResponse[]),
       ]);
       const oddsMap = new Map<number, ApiOddsResponse>();
       oddsArr.forEach((o) => oddsMap.set(o.fixture.id, o));
-      setAllMatches(buildMatches(fixtures, oddsMap));
-    } catch (err: any) {
-      setError(err.message || "Veriler yüklenirken hata oluştu");
-    } finally {
-      setLoading(false);
-    }
-  };
+      return buildMatches(fixtures, oddsMap);
+    },
+    staleTime: 2 * 60 * 1000, // 2 minutes
+    refetchInterval: 3 * 60 * 1000, // auto-refresh every 3 minutes
+    refetchOnWindowFocus: true,
+  });
 
-  useEffect(() => {
-    loadData();
-    const interval = setInterval(loadData, 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, []);
+  const error = queryError ? (queryError as Error).message : null;
 
   useEffect(() => {
     if (searchOpen && searchInputRef.current) {
@@ -453,9 +449,14 @@ const BettingOdds = ({ onAddBet, selectedBets }: BettingOddsProps) => {
       else if (activeFilter === "all") { /* show all */ }
     }
 
-    // Always sort Turkish matches to the top
-    const isTurkish = (m: ParsedMatch) => m.leagueCountry === "Turkey" ? 0 : 1;
-    filtered = [...filtered].sort((a, b) => isTurkish(a) - isTurkish(b));
+    // Sort: live first, then Turkish, then by time
+    filtered = [...filtered].sort((a, b) => {
+      if (a.isLive !== b.isLive) return a.isLive ? -1 : 1;
+      const ta = a.leagueCountry === "Turkey" ? 0 : 1;
+      const tb = b.leagueCountry === "Turkey" ? 0 : 1;
+      if (ta !== tb) return ta - tb;
+      return a.time.localeCompare(b.time);
+    });
 
     return filtered.slice(0, 50);
   }, [allMatches, activeFilter, searchQuery]);
@@ -480,7 +481,7 @@ const BettingOdds = ({ onAddBet, selectedBets }: BettingOddsProps) => {
         <div className="container mx-auto px-2 sm:px-4 flex flex-col items-center justify-center py-20 gap-3">
           <AlertCircle className="h-8 w-8 text-destructive" />
           <p className="text-destructive text-sm text-center">{error}</p>
-          <button onClick={loadData} className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm">
+          <button onClick={() => loadData()} className="flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg text-sm">
             <RefreshCw className="h-4 w-4" /> Tekrar Dene
           </button>
         </div>
@@ -550,7 +551,7 @@ const BettingOdds = ({ onAddBet, selectedBets }: BettingOddsProps) => {
                 {label}
               </button>
             ))}
-            <button onClick={loadData} className="p-1.5 rounded-lg text-muted-foreground hover:text-primary transition-colors" title="Yenile">
+            <button onClick={() => loadData()} className="p-1.5 rounded-lg text-muted-foreground hover:text-primary transition-colors" title="Yenile">
               <RefreshCw className="h-3.5 w-3.5" />
             </button>
           </div>
