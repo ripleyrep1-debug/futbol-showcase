@@ -1,4 +1,4 @@
-import { Trophy, Wallet, Receipt, Gamepad2, LogIn, UserPlus } from "lucide-react";
+import { Trophy, Wallet, Receipt, Gamepad2, LogIn, UserPlus, Spade } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 import { useAuth } from "@/hooks/useAuth";
 
@@ -52,11 +52,11 @@ const BottomNav = ({ onOpenDeposit, onOpenAuth }: BottomNavProps) => {
               <span className="text-[10px] font-medium">Bakiye</span>
             </button>
             <Link
-              to={standingsHref}
-              className="flex-1 flex flex-col items-center justify-center py-2 gap-0.5 text-muted-foreground active:text-primary transition-colors"
+              to="/blackjack"
+              className={`flex-1 flex flex-col items-center justify-center py-2 gap-0.5 transition-colors ${location.pathname === "/blackjack" ? "text-primary" : "text-muted-foreground active:text-primary"}`}
             >
-              <Trophy className="h-5 w-5" />
-              <span className="text-[10px] font-medium">Puan</span>
+              <Spade className="h-5 w-5" />
+              <span className="text-[10px] font-medium">Blackjack</span>
             </Link>
           </>
         ) : (

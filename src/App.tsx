@@ -26,6 +26,7 @@ import BetTypeSettings from "./pages/admin/BetTypeSettings";
 import Support from "./pages/admin/Support";
 import LiveSupportChat from "./components/LiveSupportChat";
 import ScrollToTop from "./components/ScrollToTop";
+import Blackjack from "./pages/Blackjack";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -43,6 +44,7 @@ const App = () => (
             <Route path="/iletisim" element={<Contact />} />
             <Route path="/kurallar" element={<Rules />} />
             <Route path="/gizlilik" element={<Privacy />} />
+            <Route path="/blackjack" element={<Blackjack />} />
             <Route path="/admin" element={<AdminLayout />}>
               <Route index element={<Dashboard />} />
               <Route path="kullanicilar" element={<Users />} />
