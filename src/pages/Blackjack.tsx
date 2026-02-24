@@ -28,7 +28,7 @@ interface HandState {
 // ─── Constants ───
 const SUITS: Suit[] = ["♠", "♥", "♦", "♣"];
 const RANKS: Rank[] = ["A", "2", "3", "4", "5", "6", "7", "8", "9", "10", "J", "Q", "K"];
-const QUICK_BETS = [10, 25, 50, 100, 250, 500];
+const QUICK_BETS = [100, 250, 500, 1000, 2500, 5000];
 
 // ─── Sound Engine ───
 class SoundEngine {
@@ -181,8 +181,8 @@ const Blackjack = () => {
   });
 
   const balance = profile?.balance ?? 0;
-  const minBet = Number(settings?.blackjack_min_bet) || 10;
-  const maxBet = Number(settings?.blackjack_max_bet) || 500;
+  const minBet = Number(settings?.blackjack_min_bet) || 100;
+  const maxBet = Number(settings?.blackjack_max_bet) || 10000;
   const bjPayout = Number(settings?.blackjack_payout) || 2.5;
   const houseEdge = Number(settings?.blackjack_house_edge) || 67;
   const allowSplit = settings?.blackjack_allow_split !== "false";

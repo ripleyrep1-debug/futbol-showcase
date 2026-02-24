@@ -123,11 +123,11 @@ const Settings = () => {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <label className="text-sm font-medium">Min Bahis (₺)</label>
-                <Input type="number" value={values.blackjack_min_bet ?? "10"} onChange={(e) => update("blackjack_min_bet", e.target.value)} />
+                <Input type="number" value={values.blackjack_min_bet ?? "100"} onChange={(e) => update("blackjack_min_bet", e.target.value)} />
               </div>
               <div className="space-y-2">
                 <label className="text-sm font-medium">Max Bahis (₺)</label>
-                <Input type="number" value={values.blackjack_max_bet ?? "500"} onChange={(e) => update("blackjack_max_bet", e.target.value)} />
+                <Input type="number" value={values.blackjack_max_bet ?? "10000"} onChange={(e) => update("blackjack_max_bet", e.target.value)} />
               </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
