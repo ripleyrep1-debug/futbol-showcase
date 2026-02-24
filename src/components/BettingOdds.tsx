@@ -408,7 +408,7 @@ const OddsChip = ({
 
 /* ─── Main Component ─── */
 const BettingOdds = ({ onAddBet, selectedBets, selectedLeague }: BettingOddsProps) => {
-  const [activeFilter, setActiveFilter] = useState<"all" | "live" | "upcoming" | "popular">("popular");
+  const [activeFilter, setActiveFilter] = useState<"all" | "live" | "upcoming" | "popular">("all");
   const [activeDay, setActiveDay] = useState<string>("all"); // "all" or YYYY-MM-DD
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
