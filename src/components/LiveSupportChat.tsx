@@ -169,7 +169,7 @@ const LiveSupportChat = () => {
       {!open && (
         <button
           onClick={() => setOpen(true)}
-          className="fixed bottom-20 right-4 z-50 sm:bottom-6 sm:right-6 bg-primary text-primary-foreground rounded-full p-3.5 shadow-lg hover:scale-105 transition-transform"
+          className="fixed bottom-28 right-4 z-40 sm:bottom-6 sm:right-6 bg-primary text-primary-foreground rounded-full p-3.5 shadow-lg hover:scale-105 transition-transform"
           aria-label="Canlı Destek"
         >
           <MessageCircle className="h-6 w-6" />
@@ -178,7 +178,7 @@ const LiveSupportChat = () => {
 
       {open && (
         <div
-          className="fixed bottom-16 right-2 z-50 sm:bottom-6 sm:right-6 w-[calc(100vw-16px)] max-w-sm bg-card border border-border rounded-xl shadow-2xl flex flex-col overflow-hidden"
+          className="fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom)+4px)] right-2 z-50 sm:bottom-6 sm:right-6 w-[calc(100vw-16px)] max-w-sm bg-card border border-border rounded-xl shadow-2xl flex flex-col overflow-hidden"
           style={{ height: "min(480px, 70vh)" }}
         >
           {/* Header */}
@@ -275,12 +275,12 @@ const GuestChat = () => {
   return (
     <>
       {!open && (
-        <button onClick={() => setOpen(true)} className="fixed bottom-20 right-4 z-50 sm:bottom-6 sm:right-6 bg-primary text-primary-foreground rounded-full p-3.5 shadow-lg hover:scale-105 transition-transform" aria-label="Canlı Destek">
+        <button onClick={() => setOpen(true)} className="fixed bottom-28 right-4 z-40 sm:bottom-6 sm:right-6 bg-primary text-primary-foreground rounded-full p-3.5 shadow-lg hover:scale-105 transition-transform" aria-label="Canlı Destek">
           <MessageCircle className="h-6 w-6" />
         </button>
       )}
       {open && (
-        <div className="fixed bottom-16 right-2 z-50 sm:bottom-6 sm:right-6 w-[calc(100vw-16px)] max-w-sm bg-card border border-border rounded-xl shadow-2xl flex flex-col overflow-hidden" style={{ height: "min(480px, 70vh)" }}>
+        <div className="fixed bottom-[calc(3.5rem+env(safe-area-inset-bottom)+4px)] right-2 z-50 sm:bottom-6 sm:right-6 w-[calc(100vw-16px)] max-w-sm bg-card border border-border rounded-xl shadow-2xl flex flex-col overflow-hidden" style={{ height: "min(480px, 70vh)" }}>
           <div className="bg-primary px-4 py-3 flex items-center justify-between shrink-0">
             <div className="flex items-center gap-2">
               <Headphones className="h-5 w-5 text-primary-foreground" />
