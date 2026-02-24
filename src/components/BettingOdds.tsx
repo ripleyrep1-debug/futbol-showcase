@@ -40,11 +40,12 @@ interface ParsedMatch {
   allBets: ApiOddsBet[];
 }
 
-const FINISHED_STATUSES = ["FT", "AET", "PEN", "WO", "AWD", "CANC", "ABD", "INT", "PST", "SUSP"];
+const FINISHED_STATUSES = ["FT", "AET", "PEN", "WO", "AWD", "CANC", "ABD"];
+const POSTPONED_STATUSES = ["PST", "SUSP", "INT"];
 
 function buildMatches(fixtures: ApiFixture[], oddsMap: Map<number, ApiOddsResponse>): ParsedMatch[] {
   return fixtures
-    .filter((f) => !FINISHED_STATUSES.includes(f.fixture.status.short))
+    .filter((f) => !FINISHED_STATUSES.includes(f.fixture.status.short) && !POSTPONED_STATUSES.includes(f.fixture.status.short))
     .map((f) => {
       const oddsData = oddsMap.get(f.fixture.id);
       const allBets = oddsData?.bookmakers?.[0]?.bets || [];
@@ -444,8 +445,17 @@ const BettingOdds = ({ onAddBet, selectedBets }: BettingOddsProps) => {
     } else {
       // Apply category filter only when not searching
       if (activeFilter === "live") filtered = allMatches.filter((m) => m.isLive);
-      else if (activeFilter === "upcoming") filtered = allMatches.filter((m) => !m.isLive && m.allBets.length > 0);
-      else if (activeFilter === "popular") filtered = [...allMatches].sort((a, b) => b.allBets.length - a.allBets.length).filter((m) => m.allBets.length > 0);
+      else if (activeFilter === "upcoming") filtered = allMatches.filter((m) => !m.isLive);
+      else if (activeFilter === "popular") {
+        // Show matches with odds first, then all remaining (so Turkish matches without odds still show)
+        const withOdds = allMatches.filter((m) => m.allBets.length > 0);
+        if (withOdds.length > 0) {
+          filtered = withOdds.sort((a, b) => b.allBets.length - a.allBets.length);
+        } else {
+          // No odds available at all — show all upcoming matches
+          filtered = allMatches;
+        }
+      }
       else if (activeFilter === "all") { /* show all */ }
     }
 
