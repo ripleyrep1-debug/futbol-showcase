@@ -14,6 +14,11 @@ import Bets from "./pages/admin/Bets";
 import OddsControl from "./pages/admin/OddsControl";
 import Payments from "./pages/admin/Payments";
 import Settings from "./pages/admin/Settings";
+import Analytics from "./pages/admin/Analytics";
+import DataManagement from "./pages/admin/DataManagement";
+import TransactionHistory from "./pages/admin/TransactionHistory";
+import BetHistory from "./pages/admin/BetHistory";
+import BetTypeSettings from "./pages/admin/BetTypeSettings";
 
 const queryClient = new QueryClient();
 
@@ -34,6 +39,11 @@ const App = () => (
               <Route path="oranlar" element={<OddsControl />} />
               <Route path="odemeler" element={<Payments />} />
               <Route path="ayarlar" element={<Settings />} />
+              <Route path="analiz" element={<Analytics />} />
+              <Route path="veri-yonetimi" element={<DataManagement />} />
+              <Route path="islem-gecmisi" element={<TransactionHistory />} />
+              <Route path="bahis-gecmisi" element={<BetHistory />} />
+              <Route path="bahis-turleri" element={<BetTypeSettings />} />
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>
