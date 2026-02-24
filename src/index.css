@@ -2,66 +2,66 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap');
 
 @layer base {
   :root {
-    --background: 270 50% 6%;
-    --foreground: 45 100% 96%;
+    --background: 215 45% 6%;
+    --foreground: 210 20% 95%;
 
-    --card: 270 45% 10%;
-    --card-foreground: 45 100% 96%;
+    --card: 215 40% 10%;
+    --card-foreground: 210 20% 95%;
 
-    --popover: 270 45% 10%;
-    --popover-foreground: 45 100% 96%;
+    --popover: 215 40% 10%;
+    --popover-foreground: 210 20% 95%;
 
-    --primary: 280 85% 55%;
+    --primary: 205 85% 50%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 270 40% 18%;
-    --secondary-foreground: 45 100% 96%;
+    --secondary: 215 35% 16%;
+    --secondary-foreground: 210 20% 95%;
 
-    --muted: 270 30% 15%;
-    --muted-foreground: 270 10% 60%;
+    --muted: 215 25% 14%;
+    --muted-foreground: 215 15% 55%;
 
-    --accent: 43 96% 56%;
-    --accent-foreground: 270 50% 6%;
+    --accent: 200 100% 60%;
+    --accent-foreground: 215 45% 6%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 270 30% 20%;
-    --input: 270 30% 20%;
-    --ring: 280 85% 55%;
+    --border: 215 25% 18%;
+    --input: 215 25% 18%;
+    --ring: 205 85% 50%;
 
     --radius: 0.75rem;
 
     /* Custom tokens */
-    --gold: 43 96% 56%;
-    --gold-glow: 43 100% 65%;
-    --purple-light: 280 70% 65%;
-    --purple-dark: 270 50% 12%;
+    --blue-bright: 200 100% 60%;
+    --blue-glow: 200 100% 70%;
+    --blue-deep: 215 60% 35%;
+    --silver: 210 10% 75%;
     --live-red: 0 85% 55%;
     
     /* Gradients */
-    --gradient-hero: linear-gradient(135deg, hsl(270 50% 8%) 0%, hsl(280 60% 15%) 50%, hsl(270 50% 8%) 100%);
-    --gradient-card: linear-gradient(180deg, hsl(270 45% 12%) 0%, hsl(270 45% 8%) 100%);
-    --gradient-gold: linear-gradient(135deg, hsl(43 96% 56%) 0%, hsl(35 100% 50%) 100%);
-    --gradient-purple: linear-gradient(135deg, hsl(280 85% 55%) 0%, hsl(300 80% 45%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(215 45% 7%) 0%, hsl(210 50% 14%) 50%, hsl(215 45% 7%) 100%);
+    --gradient-card: linear-gradient(180deg, hsl(215 40% 12%) 0%, hsl(215 40% 8%) 100%);
+    --gradient-blue: linear-gradient(135deg, hsl(205 85% 50%) 0%, hsl(200 100% 60%) 100%);
+    --gradient-dark-blue: linear-gradient(135deg, hsl(215 60% 25%) 0%, hsl(205 85% 50%) 100%);
 
     /* Shadows */
-    --shadow-glow-gold: 0 0 30px hsl(43 96% 56% / 0.3);
-    --shadow-glow-purple: 0 0 30px hsl(280 85% 55% / 0.4);
-    --shadow-card: 0 8px 32px hsl(0 0% 0% / 0.4);
+    --shadow-glow-blue: 0 0 30px hsl(200 100% 60% / 0.3);
+    --shadow-glow-primary: 0 0 30px hsl(205 85% 50% / 0.4);
+    --shadow-card: 0 8px 32px hsl(0 0% 0% / 0.5);
 
     /* Fonts */
-    --font-display: 'Bebas Neue', sans-serif;
+    --font-display: 'Rajdhani', sans-serif;
     --font-body: 'Inter', sans-serif;
   }
 
   .dark {
-    --background: 270 50% 6%;
-    --foreground: 45 100% 96%;
+    --background: 215 45% 6%;
+    --foreground: 210 20% 95%;
   }
 }
 
@@ -77,33 +77,34 @@
 
   h1, h2, h3, h4, h5, h6 {
     font-family: var(--font-display);
-    letter-spacing: 0.05em;
+    font-weight: 700;
+    letter-spacing: 0.02em;
   }
 }
 
 @layer components {
-  .btn-gold {
-    @apply bg-accent text-accent-foreground font-semibold px-6 py-3 rounded-lg;
-    background: var(--gradient-gold);
-    box-shadow: var(--shadow-glow-gold);
-    transition: all 0.3s ease;
-  }
-
-  .btn-gold:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 0 40px hsl(43 96% 56% / 0.5);
-  }
-
-  .btn-purple {
+  .btn-primary {
     @apply bg-primary text-primary-foreground font-semibold px-6 py-3 rounded-lg;
-    background: var(--gradient-purple);
-    box-shadow: var(--shadow-glow-purple);
+    background: var(--gradient-blue);
+    box-shadow: var(--shadow-glow-blue);
     transition: all 0.3s ease;
   }
 
-  .btn-purple:hover {
+  .btn-primary:hover {
     transform: translateY(-2px);
-    box-shadow: 0 0 40px hsl(280 85% 55% / 0.6);
+    box-shadow: 0 0 40px hsl(200 100% 60% / 0.5);
+  }
+
+  .btn-outline {
+    @apply font-semibold px-6 py-3 rounded-lg border;
+    border-color: hsl(var(--primary));
+    color: hsl(var(--primary));
+    transition: all 0.3s ease;
+  }
+
+  .btn-outline:hover {
+    background: hsl(var(--primary) / 0.1);
+    transform: translateY(-1px);
   }
 
   .card-match {
@@ -115,7 +116,7 @@
 
   .card-match:hover {
     border-color: hsl(var(--primary) / 0.5);
-    transform: translateY(-4px);
+    transform: translateY(-2px);
   }
 
   .odds-btn {
@@ -129,7 +130,7 @@
   }
 
   .live-badge {
-    @apply inline-flex items-center gap-1.5 px-2 py-1 rounded text-xs font-bold uppercase;
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded text-xs font-bold uppercase;
     background: hsl(var(--live-red));
     color: white;
     animation: pulse-live 2s infinite;
@@ -143,11 +144,16 @@
   .glow-text {
     text-shadow: 0 0 20px hsl(var(--accent) / 0.5);
   }
+
+  .section-title {
+    @apply text-2xl md:text-3xl font-bold tracking-wide;
+    color: hsl(var(--foreground));
+  }
 }
 
 /* Custom scrollbar */
 ::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -155,29 +161,29 @@
 }
 
 ::-webkit-scrollbar-thumb {
-  background: hsl(var(--primary) / 0.5);
-  border-radius: 4px;
+  background: hsl(var(--primary) / 0.4);
+  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: hsl(var(--primary));
 }
 
-/* API-SPORTS Custom Theme */
-api-sports-widget[data-theme="VenomDark"] {
-  --primary-color: #a855f7;
+/* API-SPORTS Custom Theme - BlueBet */
+api-sports-widget[data-theme="BlueBet"] {
+  --primary-color: #2196F3;
   --success-color: #22c55e;
   --warning-color: #eab308;
   --danger-color: #ef4444;
   --light-color: #9ca3af;
 
-  --home-color: #a855f7;
-  --away-color: #f59e0b;
+  --home-color: #2196F3;
+  --away-color: #38bdf8;
 
-  --text-color: #faf5e4;
+  --text-color: #e8edf2;
   --text-color-info: #9ca3af;
 
-  --background-color: #1a1025;
+  --background-color: #0d1520;
 
   --primary-font-size: 0.72rem;
   --secondary-font-size: 0.75rem;
@@ -188,7 +194,7 @@ api-sports-widget[data-theme="VenomDark"] {
   --button-text-transform: uppercase;
   --title-text-transform: uppercase;
 
-  --border: 1px solid rgba(168, 85, 247, 0.2);
+  --border: 1px solid rgba(33, 150, 243, 0.15);
   --game-height: 2.3rem;
   --league-height: 2.35rem;
 
@@ -196,5 +202,5 @@ api-sports-widget[data-theme="VenomDark"] {
   --flag-size: 22px;
   --teams-logo-size: 18px;
   --teams-logo-size-xl: 5rem;
-  --hover: rgba(168, 85, 247, 0.15);
+  --hover: rgba(33, 150, 243, 0.1);
 }

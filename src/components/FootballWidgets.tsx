@@ -1,11 +1,6 @@
 import { useEffect, useRef } from "react";
 
-interface WidgetProps {
-  attrs: Record<string, string>;
-  className?: string;
-}
-
-const Widget = ({ attrs, className }: WidgetProps) => {
+const Widget = ({ attrs, className }: { attrs: Record<string, string>; className?: string }) => {
   const ref = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -24,14 +19,15 @@ const Widget = ({ attrs, className }: WidgetProps) => {
 
 const FootballWidgets = () => {
   return (
-    <div className="space-y-12 py-8">
+    <div className="space-y-10 py-8">
 
       {/* Live Games */}
-      <section className="container mx-auto px-4">
-        <h2 className="text-3xl font-display tracking-wider text-accent mb-6">
-          ⚽ CANLI MAÇLAR
+      <section id="live" className="container mx-auto px-4">
+        <h2 className="section-title mb-5 flex items-center gap-2">
+          <span className="inline-block w-1 h-7 rounded-full bg-primary" />
+          Canlı Maçlar
         </h2>
-        <div className="rounded-xl border border-border overflow-hidden" style={{ background: "var(--gradient-card)" }}>
+        <div className="rounded-xl border border-border overflow-hidden">
           <Widget attrs={{
             "data-type": "games",
             "data-show-toolbar": "true",
@@ -46,10 +42,11 @@ const FootballWidgets = () => {
 
       {/* Today's Games */}
       <section className="container mx-auto px-4">
-        <h2 className="text-3xl font-display tracking-wider text-accent mb-6">
-          📅 BUGÜNÜN MAÇLARI
+        <h2 className="section-title mb-5 flex items-center gap-2">
+          <span className="inline-block w-1 h-7 rounded-full bg-accent" />
+          Bugünün Maçları
         </h2>
-        <div className="rounded-xl border border-border overflow-hidden" style={{ background: "var(--gradient-card)" }}>
+        <div className="rounded-xl border border-border overflow-hidden">
           <Widget attrs={{
             "data-type": "games",
             "data-show-toolbar": "true",
@@ -62,11 +59,12 @@ const FootballWidgets = () => {
       </section>
 
       {/* Süper Lig */}
-      <section className="container mx-auto px-4">
-        <h2 className="text-3xl font-display tracking-wider text-accent mb-6">
-          🇹🇷 SÜPER LİG
+      <section id="leagues" className="container mx-auto px-4">
+        <h2 className="section-title mb-5 flex items-center gap-2">
+          <span className="inline-block w-1 h-7 rounded-full bg-primary" />
+          🇹🇷 Süper Lig
         </h2>
-        <div className="rounded-xl border border-border overflow-hidden" style={{ background: "var(--gradient-card)" }}>
+        <div className="rounded-xl border border-border overflow-hidden">
           <Widget attrs={{
             "data-type": "league",
             "data-league": "203",
@@ -77,12 +75,13 @@ const FootballWidgets = () => {
         </div>
       </section>
 
-      {/* Premier League Standings */}
-      <section className="container mx-auto px-4">
-        <h2 className="text-3xl font-display tracking-wider text-accent mb-6">
-          🏴󠁧󠁢󠁥󠁮󠁧󠁿 PREMİER LİG PUAN DURUMU
+      {/* Standings */}
+      <section id="standings" className="container mx-auto px-4">
+        <h2 className="section-title mb-5 flex items-center gap-2">
+          <span className="inline-block w-1 h-7 rounded-full bg-accent" />
+          Premier Lig Puan Durumu
         </h2>
-        <div className="rounded-xl border border-border overflow-hidden" style={{ background: "var(--gradient-card)" }}>
+        <div className="rounded-xl border border-border overflow-hidden">
           <Widget attrs={{
             "data-type": "standings",
             "data-league": "39",
@@ -92,12 +91,13 @@ const FootballWidgets = () => {
         </div>
       </section>
 
-      {/* La Liga Standings */}
+      {/* La Liga */}
       <section className="container mx-auto px-4">
-        <h2 className="text-3xl font-display tracking-wider text-accent mb-6">
-          🇪🇸 LA LIGA PUAN DURUMU
+        <h2 className="section-title mb-5 flex items-center gap-2">
+          <span className="inline-block w-1 h-7 rounded-full bg-primary" />
+          🇪🇸 La Liga Puan Durumu
         </h2>
-        <div className="rounded-xl border border-border overflow-hidden" style={{ background: "var(--gradient-card)" }}>
+        <div className="rounded-xl border border-border overflow-hidden">
           <Widget attrs={{
             "data-type": "standings",
             "data-league": "140",
@@ -109,10 +109,11 @@ const FootballWidgets = () => {
 
       {/* All Leagues */}
       <section className="container mx-auto px-4">
-        <h2 className="text-3xl font-display tracking-wider text-accent mb-6">
-          🌍 TÜM LİGLER
+        <h2 className="section-title mb-5 flex items-center gap-2">
+          <span className="inline-block w-1 h-7 rounded-full bg-accent" />
+          Tüm Ligler
         </h2>
-        <div className="rounded-xl border border-border overflow-hidden" style={{ background: "var(--gradient-card)" }}>
+        <div className="rounded-xl border border-border overflow-hidden">
           <Widget attrs={{
             "data-type": "leagues",
             "data-target-league": "modal",
@@ -120,12 +121,13 @@ const FootballWidgets = () => {
         </div>
       </section>
 
-      {/* H2H: Galatasaray vs Fenerbahçe */}
-      <section className="container mx-auto px-4">
-        <h2 className="text-3xl font-display tracking-wider text-accent mb-6">
-          🔥 GALATASARAY vs FENERBAHÇE
+      {/* H2H */}
+      <section id="stats" className="container mx-auto px-4">
+        <h2 className="section-title mb-5 flex items-center gap-2">
+          <span className="inline-block w-1 h-7 rounded-full bg-primary" />
+          🔥 Galatasaray vs Fenerbahçe
         </h2>
-        <div className="rounded-xl border border-border overflow-hidden" style={{ background: "var(--gradient-card)" }}>
+        <div className="rounded-xl border border-border overflow-hidden">
           <Widget attrs={{
             "data-type": "h2h",
             "data-h2h": "645-611",
