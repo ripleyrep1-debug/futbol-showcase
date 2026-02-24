@@ -239,8 +239,8 @@ const BettingOdds = ({ onAddBet, selectedBets }: BettingOddsProps) => {
   const liveCount = allMatches.filter((m) => m.isLive).length;
 
   return (
-    <section id="odds" className="py-8">
-      <div className="container mx-auto px-4">
+    <section id="odds" className="py-4 sm:py-8">
+      <div className="container mx-auto px-2 sm:px-4">
         {/* Section Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4">
           <div>
@@ -252,7 +252,7 @@ const BettingOdds = ({ onAddBet, selectedBets }: BettingOddsProps) => {
               {allMatches.length} maç • {matchesWithOdds} oran mevcut • {liveCount} canlı
             </p>
           </div>
-          <div className="flex gap-2 flex-wrap items-center">
+          <div className="flex gap-1.5 sm:gap-2 flex-wrap items-center">
             {[
               { key: "popular" as const, label: "Popüler", icon: Star },
               { key: "live" as const, label: `Canlı (${liveCount})`, icon: Zap },
@@ -262,7 +262,7 @@ const BettingOdds = ({ onAddBet, selectedBets }: BettingOddsProps) => {
               <button
                 key={key}
                 onClick={() => setActiveFilter(key)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
+                className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-all ${
                   activeFilter === key
                     ? "bg-primary text-primary-foreground shadow-lg"
                     : "bg-secondary text-muted-foreground hover:text-foreground"

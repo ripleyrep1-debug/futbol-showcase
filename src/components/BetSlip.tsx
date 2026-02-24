@@ -38,7 +38,7 @@ const BetSlip = ({ bets, onRemoveBet, onClearAll }: BetSlipProps) => {
 
         {/* Mobile expanded slip */}
         {isOpen && (
-          <div className="bg-card border-t border-border max-h-[60vh] overflow-y-auto p-4 space-y-3">
+          <div className="bg-card border-t border-border max-h-[65vh] overflow-y-auto p-3 space-y-2">
             <SlipContent
               bets={bets}
               onRemoveBet={onRemoveBet}

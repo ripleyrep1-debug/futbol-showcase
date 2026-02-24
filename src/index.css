@@ -108,7 +108,7 @@
   }
 
   .card-match {
-    @apply rounded-xl border border-border p-4;
+    @apply rounded-xl border border-border p-3 sm:p-4;
     background: var(--gradient-card);
     box-shadow: var(--shadow-card);
     transition: all 0.3s ease;
@@ -146,8 +146,17 @@
   }
 
   .section-title {
-    @apply text-2xl md:text-3xl font-bold tracking-wide;
+    @apply text-xl sm:text-2xl md:text-3xl font-bold tracking-wide;
     color: hsl(var(--foreground));
+  }
+
+  /* Hide scrollbar for category tabs */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
   }
 }
 
