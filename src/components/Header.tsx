@@ -4,8 +4,8 @@ import bluebetLogo from "@/assets/bluebet-logo-new.png";
 
 const navLinks = [
   { label: "Ana Sayfa", href: "#" },
+  { label: "Bahis Oranları", href: "#odds" },
   { label: "Canlı Maçlar", href: "#live" },
-  { label: "Lig Maçları", href: "#leagues" },
   { label: "Puan Durumu", href: "#standings" },
   { label: "İstatistikler", href: "#stats" },
 ];
