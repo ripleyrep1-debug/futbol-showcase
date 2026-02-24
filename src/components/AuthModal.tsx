@@ -34,7 +34,7 @@ const AuthModal = ({ open, onOpenChange, defaultTab = "login" }: AuthModalProps)
       return;
     }
     setLoading(true);
-    const fakeEmail = `${username.trim().toLowerCase()}@bluebet.local`;
+    const fakeEmail = `${username.trim().toLowerCase()}@users.bluebet.app`;
 
     if (tab === "login") {
       const { error } = await supabase.auth.signInWithPassword({ email: fakeEmail, password });
