@@ -25,12 +25,18 @@ const Bets = () => {
     queryFn: async () => {
       let q = supabase
         .from("bets")
-        .select("*, profiles(display_name)")
+        .select("*")
         .order("created_at", { ascending: false });
       if (statusFilter !== "all") q = q.eq("status", statusFilter);
       const { data, error } = await q;
       if (error) throw error;
-      return data;
+
+      const userIds = [...new Set((data ?? []).map((b: any) => b.user_id))];
+      const { data: profiles } = await supabase.from("profiles").select("id, display_name").in("id", userIds);
+      const nameMap: Record<string, string> = {};
+      profiles?.forEach((p: any) => { nameMap[p.id] = p.display_name; });
+
+      return (data ?? []).map((b: any) => ({ ...b, display_name: nameMap[b.user_id] || "—" }));
     },
   });
 
@@ -64,7 +70,7 @@ const Bets = () => {
   });
 
   const filtered = (bets ?? []).filter((b: any) =>
-    (b.profiles?.display_name ?? "").toLowerCase().includes(search.toLowerCase()) ||
+    (b.display_name ?? "").toLowerCase().includes(search.toLowerCase()) ||
     b.id.toLowerCase().includes(search.toLowerCase())
   );
 
@@ -134,7 +140,7 @@ const Bets = () => {
                       return (
                         <TableRow key={bet.id}>
                           <TableCell className="text-xs text-muted-foreground font-mono">{bet.id.slice(0, 8)}</TableCell>
-                          <TableCell className="font-medium">{bet.profiles?.display_name ?? "—"}</TableCell>
+                          <TableCell className="font-medium">{bet.display_name}</TableCell>
                           <TableCell>₺{Number(bet.stake).toLocaleString("tr-TR")}</TableCell>
                           <TableCell>{Number(bet.total_odds).toFixed(2)}</TableCell>
                           <TableCell className="font-semibold">₺{Number(bet.potential_win).toLocaleString("tr-TR")}</TableCell>

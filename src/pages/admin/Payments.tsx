@@ -37,11 +37,18 @@ const Payments = () => {
   const { data: payments, isLoading } = useQuery({
     queryKey: ["admin-payments", statusFilter],
     queryFn: async () => {
-      let q = supabase.from("payment_requests").select("*, profiles(display_name)").order("created_at", { ascending: false });
+      let q = supabase.from("payment_requests").select("*").order("created_at", { ascending: false });
       if (statusFilter !== "all") q = q.eq("status", statusFilter);
       const { data, error } = await q;
       if (error) throw error;
-      return data;
+
+      // Fetch display names for all user_ids
+      const userIds = [...new Set((data ?? []).map((p: any) => p.user_id))];
+      const { data: profiles } = await supabase.from("profiles").select("id, display_name").in("id", userIds);
+      const nameMap: Record<string, string> = {};
+      profiles?.forEach((p: any) => { nameMap[p.id] = p.display_name; });
+
+      return (data ?? []).map((p: any) => ({ ...p, display_name: nameMap[p.user_id] || "—" }));
     },
   });
 
@@ -195,7 +202,7 @@ const Payments = () => {
                   ) : (
                     filtered.map((p: any) => (
                       <TableRow key={p.id}>
-                        <TableCell className="font-medium">{p.profiles?.display_name ?? "—"}</TableCell>
+                        <TableCell className="font-medium">{p.display_name}</TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
                             {p.type === "deposit" ? <ArrowDownCircle className="h-4 w-4 text-green-400" /> : <ArrowUpCircle className="h-4 w-4 text-orange-400" />}
@@ -236,7 +243,7 @@ const Payments = () => {
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <p className="text-sm text-muted-foreground">Kullanıcı: <span className="text-foreground font-medium">{processModal?.profiles?.display_name}</span></p>
+              <p className="text-sm text-muted-foreground">Kullanıcı: <span className="text-foreground font-medium">{processModal?.display_name}</span></p>
               <p className="text-sm text-muted-foreground">Tutar: <span className="text-foreground font-bold">₺{Number(processModal?.amount ?? 0).toLocaleString("tr-TR")}</span></p>
             </div>
             <div className="space-y-2">
