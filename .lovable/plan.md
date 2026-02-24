@@ -1,56 +1,33 @@
 
 
-## Plan: Per-Selection Results on MyBets + Admin Bet Detail Management
+## Problem
 
-### Problem
-Currently, users only see the overall bet status (Bekliyor/Kazandı/Kaybetti). They have no visibility into which individual selections within a coupon have won or lost. The admin also settles the entire bet at once without marking individual selections.
+The "Popular" filter currently forces all Turkish matches to the top — even those without odds — pushing down matches that actually have betting data. This clutters the default view and makes it hard to find actionable matches with odds.
 
-### Solution
+## Solution
 
-**1. Admin Side — Bets Page Enhancement (`Bets.tsx`)**
-- Make each bet row expandable (click to expand) showing all selections in a detailed sub-table
-- Each selection row gets a mini action: ✅ Kazandı / ❌ Kaybetti buttons
-- Marking a selection updates the `result` field inside that selection's JSONB entry (e.g., `selections[i].result = "won" | "lost"`)
-- When all selections are marked, auto-suggest settling the whole bet (if all won → "Kazandı", if any lost → "Kaybetti")
-- Admin can still override and settle the whole bet manually
+**Remove Turkish prioritization from the "Popular" filter and the global sort.** Instead, rely on the existing **"Türk Takımları (Tümü)"** sidebar filter for users who specifically want Turkish matches.
 
-**2. User Side — MyBets Page Enhancement (`MyBets.tsx`)**
-- Show each selection with a result indicator icon/badge:
-  - ✅ green check if `sel.result === "won"`
-  - ❌ red X if `sel.result === "lost"`
-  - ⏳ clock/dash if no result yet
-- Add a progress indicator: "2/3 seçim sonuçlandı" style text
-- Keep the overall bet status badge at the top as-is
+### Changes to `src/components/BettingOdds.tsx`
 
-**3. No Database Migration Needed**
-- The `selections` column is already JSONB — we just add a `result` field to each selection object when the admin marks it
-- The `bets` table update (JSONB modification) is done via Supabase's standard update
+1. **Popular filter (lines 513-526)**: Remove the `isTurkish` logic. Popular should simply show matches that have odds (`allBets.length > 0`), sorted by number of available markets (most odds first).
 
-### Files Changed
+2. **Global sort (lines 530-538)**: Remove the Turkish country priority from the final sort. Keep live-first, then sort by date and time only:
+   ```
+   Before: live → Turkish → date → time
+   After:  live → date → time
+   ```
 
-| File | Change |
-|------|--------|
-| `src/pages/admin/Bets.tsx` | Add expandable rows with per-selection result buttons, JSONB update mutation |
-| `src/pages/MyBets.tsx` | Show per-selection result icons/badges, progress indicator |
+3. **Turkish teams filter (lines 479-484)**: Keep as-is — the sidebar "Türk Takımları" filter already handles this use case correctly.
 
-### Selection JSONB Structure (before → after)
+### What stays the same
+- The `TURKISH_TEAMS` constant and `turkish_teams` sidebar filter remain untouched
+- The "Türkiye Ligleri" sidebar filter remains untouched
+- Live/upcoming/all filters unchanged
+- Search functionality unchanged
 
-```text
-Before: { matchLabel, selection, odds, ... }
-After:  { matchLabel, selection, odds, ..., result: "won" | "lost" | undefined }
-```
-
-### Implementation Details
-
-**Admin Bets page changes:**
-- Add `expandedBetId` state to toggle row expansion
-- When expanded, render a sub-row with all selections listed with match name, selection, odds, and two small buttons (Kazandı/Kaybetti)
-- Clicking a result button triggers a mutation that reads current selections JSONB, updates the specific selection's `result` field, and writes back
-- Show a summary: "3/5 seçim sonuçlandı" with auto-settle suggestion when all are marked
-- Add cancel/refund: when admin cancels a bet, refund stake back to user balance and create a refund transaction
-
-**User MyBets page changes:**
-- For each selection row, show a colored icon based on `sel.result`
-- Add a small progress bar or text showing how many selections have results
-- Style: green background tint for won selections, red tint for lost, neutral for pending
+### Result
+- Default and Popular views show matches with actual odds, not cluttered by odds-less Turkish matches
+- Users can still click "Türk Takımları (Tümü)" in the sidebar to see all Turkish matches specifically
+- Cleaner, more useful browsing experience
 
