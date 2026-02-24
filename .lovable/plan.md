@@ -1,104 +1,85 @@
 
 
-## Admin Panel Plan
+## Gap Analysis: What's Missing for User and Admin
 
-This plan creates a full admin panel with sidebar navigation, dashboard stats, and user management -- all in Turkish. Since there's no database yet, we'll set up the Supabase schema first, then build the UI.
+### Current State Summary
 
----
+**User side has:**
+- Auth (login/register via username)
+- Balance display in header
+- Deposit (IBAN) and withdrawal request modal
+- Payment history
+- Betting odds view with league filtering
+- Bet slip (add selections, set stake)
+- Football widgets, standings
 
-### Phase 1: Database Setup (Migration)
-
-Create the following tables and functions via migration:
-
-1. **`app_role` enum**: `('admin', 'user')`
-2. **`profiles` table**: `id (uuid, FK auth.users)`, `display_name`, `balance` (numeric, default 0), `status` (active/suspended), `avatar_url`, `created_at`
-3. **`user_roles` table**: `id`, `user_id (FK auth.users)`, `role (app_role)`, unique on (user_id, role)
-4. **`transactions` table**: `id`, `user_id`, `type` (deposit/withdrawal/bet/win), `amount`, `description`, `created_at`
-5. **`bets` table**: `id`, `user_id`, `selections` (jsonb), `stake`, `total_odds`, `potential_win`, `status` (pending/won/lost/cancelled), `created_at`
-6. **`site_settings` table**: `key` (text PK), `value` (text)
-7. **`has_role()` security definer function** for safe role checks
-8. **RLS policies** on all tables: users read own data, admins read/write all
-9. **Trigger** to auto-create profile on signup
-
----
-
-### Phase 2: Auth Pages
-
-- **`/giris` (Login page)**: Email/password login form, Turkish labels
-- **`/kayit` (Register page)**: Email/password signup form
-- **Auth context/hook** (`useAuth`): wraps `onAuthStateChange` + `getSession`, exposes `user`, `isAdmin`, `signOut`
+**Admin side has:**
+- Dashboard with 10 stat cards + recent activity
+- User management (search, suspend, balance edit, history)
+- Bet management (list, settle won/lost)
+- Payment processing (approve/reject deposits & withdrawals, manual IBAN entry)
+- Odds override (live match odds control)
+- Settings (limits, commission, IBAN toggle, bet category toggles, maintenance mode, announcements)
 
 ---
 
-### Phase 3: Admin Layout & Pages
+### Missing: User Side
 
-**New files:**
-
-| File | Purpose |
-|------|---------|
-| `src/components/admin/AdminLayout.tsx` | Sidebar + top bar + `<Outlet />` wrapper |
-| `src/components/admin/AdminSidebar.tsx` | Navigation: Panel, Kullanicilar, Bakiye, Bahisler, Oranlar, Odemeler, Ayarlar |
-| `src/pages/admin/Dashboard.tsx` | Stats cards (Toplam Kullanıcı, Aktif Bahisler, Günlük Hacim, Toplam Bakiye) + recent activity |
-| `src/pages/admin/Users.tsx` | User management table with search, status toggle, balance display |
-| `src/pages/admin/Bets.tsx` | Placeholder for bet management |
-| `src/pages/admin/Payments.tsx` | Placeholder for payment management |
-| `src/pages/admin/Settings.tsx` | Placeholder for site settings |
-
-**Route structure in `App.tsx`:**
-```
-/giris         → Login
-/kayit         → Register
-/admin         → AdminLayout (protected, requires admin role)
-  /admin       → Dashboard
-  /admin/kullanicilar → Users
-  /admin/bahisler     → Bets
-  /admin/odemeler     → Payments
-  /admin/ayarlar      → Settings
-```
-
-**Admin sidebar navigation items (Turkish):**
-- Genel Bakış (Dashboard) -- LayoutDashboard icon
-- Kullanıcılar -- Users icon
-- Bahis Yönetimi -- Trophy icon
-- Ödemeler -- CreditCard icon
-- Site Ayarları -- Settings icon
-
-**Dashboard stats cards:**
-- Toplam Kullanıcı (total profiles count)
-- Aktif Bahisler (pending bets count)
-- Günlük Hacim (sum of today's transactions)
-- Toplam Bakiye (sum of all user balances)
-
-**Users table columns:**
-- Kullanıcı (display_name + email)
-- Bakiye (₺ formatted)
-- Durum (active/suspended badge)
-- Kayıt Tarihi (formatted date)
-- İşlemler (suspend/activate button)
+| # | Feature | Details |
+|---|---------|---------|
+| 1 | **Bet slip doesn't actually place bets** | The "Bahis Yap" button in `BetSlip.tsx` has no `onClick` handler — it never inserts into the `bets` table, doesn't check balance, and doesn't deduct stake from user balance. This is the most critical gap. |
+| 2 | **No "My Bets" history page** | Users cannot see their past bets, results, or winnings. There's no `/bahislerim` route or component. |
+| 3 | **No user profile page** | No way to view or edit display name, change password, or see account details. |
+| 4 | **Balance not deducted on bet** | Even once bet placement works, there's no transaction created and no balance update on the user side. |
+| 5 | **No bet limits enforced on user side** | `min_stake`, `max_stake`, `max_payout`, `max_accumulator` settings exist in admin but are never checked when the user builds a bet slip. |
+| 6 | **Maintenance mode not enforced** | Admin can toggle `maintenance_mode` but the user-facing app never reads it or blocks betting. |
+| 7 | **Announcement banner not shown** | Admin can set an announcement but it's never rendered on the main page. |
+| 8 | **BottomNav is static** | Shows Giriş/Kayıt links even when logged in; doesn't link to auth modal or user-specific pages. |
+| 9 | **No login required prompt for betting** | If a non-logged-in user clicks an odds button, nothing tells them to log in first. |
+| 10 | **Dashboard "Son Bahisler/Ödemeler" join still uses `profiles(display_name)`** | The Dashboard queries still use the FK join pattern that was already fixed in Bets.tsx and Payments.tsx — these will fail silently. |
 
 ---
 
-### Phase 4: Wire Up Header
+### Missing: Admin Side
 
-- Update Header "Giriş Yap" and "Kayıt Ol" buttons to link to `/giris` and `/kayit`
-- If user is admin, show "Admin Panel" link in header
-
----
-
-### Technical Details
-
-- Admin route protection: `useAuth` hook checks `has_role` via Supabase RPC call; redirects non-admins to `/`
-- All admin data fetched via `@tanstack/react-query` using the Supabase client
-- Admin sidebar uses existing dark theme CSS variables for consistency
-- Responsive: sidebar collapses to icon-only on smaller screens
-- No new dependencies needed -- uses existing shadcn/ui components (Table, Card, Badge, Button)
+| # | Feature | Details |
+|---|---------|---------|
+| 1 | **No real-time notifications** | Admin has no alerts for new payment requests or new bets (e.g., a bell icon with count). |
+| 2 | **No user transaction log** | Admin can see recent payments and bets on the dashboard but there's no dedicated transaction history page showing all deposits/withdrawals/bet payouts. |
+| 3 | **No export/download** | No CSV/Excel export for bets, payments, or user data. |
+| 4 | **No bulk bet settlement** | Admin must settle bets one by one — no "settle all bets for match X" feature. |
+| 5 | **No audit log** | No record of which admin performed which action (approved payment, settled bet, changed odds). |
+| 6 | **Dashboard join bug** | `recentBets` and `recentPayments` queries still use `profiles(display_name)` FK join which may fail (same bug that was fixed in Bets.tsx/Payments.tsx). |
 
 ---
 
-### Security
+### Recommended Implementation Priority
 
-- Roles stored in separate `user_roles` table (never on profiles)
-- `has_role()` is `SECURITY DEFINER` to avoid RLS recursion
-- Admin check is server-side via RLS policies, not client-side only
-- RLS on all tables; admin policies use `has_role(auth.uid(), 'admin')`
+**Phase 1 — Critical (app is broken without these):**
+1. Wire up "Bahis Yap" button: check auth, check balance, check limits, insert bet, deduct balance, create transaction
+2. Fix Dashboard FK join bug (use same two-step fetch pattern)
+3. Show maintenance mode banner / block betting when active
+4. Show announcement banner on Index page
+
+**Phase 2 — Important (core user experience):**
+5. "Bahislerim" (My Bets) page at `/bahislerim` — list user's bets with status badges
+6. User profile page — display name, balance, change password
+7. Enforce site settings limits (min/max stake, max payout, max selections)
+8. Login prompt when unauthenticated user clicks odds
+9. Update BottomNav to be context-aware (show Bakiye/Bahislerim when logged in)
+
+**Phase 3 — Nice to have:**
+10. Admin notification badge for pending payments
+11. Bulk bet settlement by match
+12. CSV export for admin tables
+13. Admin audit log
+
+---
+
+### Technical Notes
+
+- **Bet placement flow**: Insert into `bets` table → insert transaction (type: `bet`, negative amount) → update `profiles.balance` via admin RLS or a new `place_bet` RPC function (SECURITY DEFINER) that atomically deducts balance and creates the bet. An RPC is preferred to avoid race conditions.
+- **Dashboard fix**: Replace `profiles(display_name)` join with the same two-step fetch already used in `Bets.tsx` and `Payments.tsx`.
+- **Maintenance/announcement**: Read `site_settings` in `Index.tsx`, render a banner component, and conditionally disable the bet slip submit button.
+- **My Bets page**: New route `/bahislerim`, new component that queries `bets` table with `user_id = auth.uid()`, shows selections, status, and payout.
 
