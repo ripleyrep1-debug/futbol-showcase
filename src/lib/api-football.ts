@@ -113,9 +113,10 @@ export async function fetchTodaysFixtures(): Promise<ApiFixture[]> {
 }
 
 export async function fetchOddsByDate(): Promise<ApiOddsResponse[]> {
-  // Fetch odds for today + next 2 days
+  // Fetch odds for all 7 days to match the fixture window
+  // Uses sequential fetching with delays to respect rate limits (10 req/min on free tier)
   const paramsList: Record<string, string>[] = [];
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 7; i++) {
     const d = new Date();
     d.setDate(d.getDate() + i);
     paramsList.push({
@@ -125,7 +126,9 @@ export async function fetchOddsByDate(): Promise<ApiOddsResponse[]> {
     });
   }
 
-  return apiFetchSequential<ApiOddsResponse>("odds", paramsList, 1200);
+  // Stagger odds requests after fixture requests finish
+  // Use 1.5s delay between each to stay well within 10 req/min limit
+  return apiFetchSequential<ApiOddsResponse>("odds", paramsList, 1500);
 }
 
 export async function fetchOddsByFixture(fixtureId: number): Promise<ApiOddsResponse[]> {
