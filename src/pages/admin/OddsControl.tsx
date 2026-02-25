@@ -148,6 +148,8 @@ const OddsControl = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-odds-overrides"] });
+      queryClient.invalidateQueries({ queryKey: ["odds-overrides-active"] });
+      queryClient.invalidateQueries({ queryKey: ["betting-matches"] });
       setEditingOdd(null);
       setCustomOddValue("");
       toast({ title: "Başarılı", description: "Oran güncellendi." });
@@ -162,6 +164,8 @@ const OddsControl = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-odds-overrides"] });
+      queryClient.invalidateQueries({ queryKey: ["odds-overrides-active"] });
+      queryClient.invalidateQueries({ queryKey: ["betting-matches"] });
       toast({ title: "Silindi" });
     },
   });
@@ -302,7 +306,46 @@ const OddsControl = () => {
                       <Loader2 className="h-5 w-5 animate-spin mr-2" /> Oranlar yükleniyor...
                     </div>
                   ) : bets.length === 0 ? (
-                    <p className="text-center text-muted-foreground py-8">Bu maç için oran bulunamadı.</p>
+                    <div className="space-y-4">
+                      <p className="text-center text-muted-foreground py-4">Bu maç için API oranı bulunamadı. Manuel oran ekleyebilirsiniz.</p>
+                      <div className="border border-border rounded-lg p-3">
+                        <h4 className="font-semibold text-sm mb-2">Maç Sonucu (1X2) — Manuel Ekle</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {[
+                            { value: "Home", label: "Ev Sahibi" },
+                            { value: "Draw", label: "Beraberlik" },
+                            { value: "Away", label: "Deplasman" },
+                          ].map((item) => {
+                            const override = getOverride(selectedFixture.fixture.id, "Match Winner", item.value);
+                            return (
+                              <button
+                                key={item.value}
+                                className={`flex items-center gap-1 px-3 py-1.5 rounded-md border text-sm transition-colors ${
+                                  override
+                                    ? "border-primary bg-primary/10 text-primary"
+                                    : "border-border hover:border-primary/50"
+                                }`}
+                                onClick={() => {
+                                  setEditingOdd({
+                                    fixture: selectedFixture,
+                                    betName: "Match Winner",
+                                    value: item.value,
+                                    originalOdd: override ? String(override.custom_odd) : "2.00",
+                                  });
+                                  setCustomOddValue(override ? String(override.custom_odd) : "");
+                                }}
+                              >
+                                <span className="text-muted-foreground">{item.label}</span>
+                                <span className="font-bold">
+                                  {override ? Number(override.custom_odd).toFixed(2) : "—"}
+                                </span>
+                                <Edit className="h-3 w-3 text-muted-foreground" />
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
                   ) : (
                     <div className="space-y-4">
                       {bets.map((bet) => (
