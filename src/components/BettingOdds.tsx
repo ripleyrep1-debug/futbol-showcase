@@ -107,7 +107,12 @@ function buildMatches(
     .filter((f) => !FINISHED_STATUSES.includes(f.fixture.status.short) && !POSTPONED_STATUSES.includes(f.fixture.status.short))
     .map((f) => {
       const oddsData = oddsMap.get(f.fixture.id);
-      let allBets = oddsData?.bookmakers?.[0]?.bets || [];
+      // Pick the bookmaker with the most bet markets available
+      const bookmakers = oddsData?.bookmakers || [];
+      const bestBookmaker = bookmakers.length > 0
+        ? bookmakers.reduce((best, cur) => cur.bets.length > best.bets.length ? cur : best, bookmakers[0])
+        : null;
+      let allBets = bestBookmaker?.bets || [];
       
       // Apply admin overrides
       allBets = applyOverrides(allBets, f.fixture.id, oddsOverrides);
