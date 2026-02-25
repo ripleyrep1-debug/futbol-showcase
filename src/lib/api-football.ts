@@ -77,8 +77,41 @@ async function apiFetch<T>(endpoint: string, params: Record<string, string>): Pr
   return data.response as T[];
 }
 
-// Sequential fetch with delay between requests to avoid rate limits
-// Pro plan: 300 req/min, so we can use shorter delays
+// Paginated fetch — fetches all pages for a single request
+async function apiFetchAllPages<T>(endpoint: string, params: Record<string, string>): Promise<T[]> {
+  const allResults: T[] = [];
+  let page = 1;
+  
+  while (true) {
+    const url = new URL(`${BASE_URL}/${endpoint}`);
+    Object.entries(params).forEach(([k, v]) => url.searchParams.set(k, v));
+    url.searchParams.set("page", String(page));
+
+    const res = await fetch(url.toString(), { headers });
+    const data = await res.json();
+
+    if (data.errors && Object.keys(data.errors).length > 0) {
+      const errMsg = typeof data.errors === "object"
+        ? Object.values(data.errors).join(", ")
+        : String(data.errors);
+      throw new Error(errMsg);
+    }
+
+    const results = data.response as T[];
+    allResults.push(...results);
+
+    const totalPages = data.paging?.total || 1;
+    console.log(`[API] ${endpoint} page ${page}/${totalPages} — ${results.length} items`);
+    
+    if (page >= totalPages) break;
+    page++;
+    await delay(200);
+  }
+  
+  return allResults;
+}
+
+// Sequential fetch with delay between requests (no pagination)
 async function apiFetchSequential<T>(
   endpoint: string,
   paramsList: Record<string, string>[],
@@ -97,9 +130,26 @@ async function apiFetchSequential<T>(
   return results;
 }
 
+// Sequential paginated fetch — fetches all pages for each params set
+async function apiFetchSequentialPaginated<T>(
+  endpoint: string,
+  paramsList: Record<string, string>[],
+  delayMs = 300
+): Promise<T[]> {
+  const results: T[] = [];
+  for (let i = 0; i < paramsList.length; i++) {
+    if (i > 0) await delay(delayMs);
+    try {
+      const data = await apiFetchAllPages<T>(endpoint, paramsList[i]);
+      results.push(...data);
+    } catch (err) {
+      console.warn(`API paginated fetch failed for ${endpoint} params=${JSON.stringify(paramsList[i])}:`, err);
+    }
+  }
+  return results;
+}
+
 export async function fetchTodaysFixtures(): Promise<ApiFixture[]> {
-  // Fetch fixtures for today + next 6 days (7 days total)
-  // Pro plan allows faster sequential fetching
   const paramsList: Record<string, string>[] = [];
   for (let i = 0; i < 7; i++) {
     const d = new Date();
@@ -109,14 +159,11 @@ export async function fetchTodaysFixtures(): Promise<ApiFixture[]> {
       timezone: "Europe/Istanbul",
     });
   }
-
   return apiFetchSequential<ApiFixture>("fixtures", paramsList, 300);
 }
 
 export async function fetchOddsByDate(): Promise<ApiOddsResponse[]> {
-  // Fetch odds for all 7 days to match the fixture window
-  // Don't restrict to a single bookmaker — get ALL available bookmakers
-  // Then we'll pick the best one per fixture
+  // Fetch odds for all 7 days with FULL PAGINATION
   const paramsList: Record<string, string>[] = [];
   for (let i = 0; i < 7; i++) {
     const d = new Date();
@@ -127,9 +174,9 @@ export async function fetchOddsByDate(): Promise<ApiOddsResponse[]> {
     });
   }
 
-  console.log("[Odds] Fetching odds for 7 days...");
-  const results = await apiFetchSequential<ApiOddsResponse>("odds", paramsList, 300);
-  console.log(`[Odds] Got ${results.length} fixture odds results`);
+  console.log("[Odds] Fetching odds for 7 days with pagination...");
+  const results = await apiFetchSequentialPaginated<ApiOddsResponse>("odds", paramsList, 300);
+  console.log(`[Odds] Got ${results.length} total fixture odds`);
   return results;
 }
 
