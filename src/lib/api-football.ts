@@ -78,10 +78,11 @@ async function apiFetch<T>(endpoint: string, params: Record<string, string>): Pr
 }
 
 // Sequential fetch with delay between requests to avoid rate limits
+// Pro plan: 300 req/min, so we can use shorter delays
 async function apiFetchSequential<T>(
   endpoint: string,
   paramsList: Record<string, string>[],
-  delayMs = 1200
+  delayMs = 300
 ): Promise<T[]> {
   const results: T[] = [];
   for (let i = 0; i < paramsList.length; i++) {
@@ -89,8 +90,8 @@ async function apiFetchSequential<T>(
     try {
       const data = await apiFetch<T>(endpoint, paramsList[i]);
       results.push(...data);
-    } catch {
-      // Skip failed requests silently
+    } catch (err) {
+      console.warn(`API fetch failed for ${endpoint} params=${JSON.stringify(paramsList[i])}:`, err);
     }
   }
   return results;
@@ -98,7 +99,7 @@ async function apiFetchSequential<T>(
 
 export async function fetchTodaysFixtures(): Promise<ApiFixture[]> {
   // Fetch fixtures for today + next 6 days (7 days total)
-  // Use sequential fetching with delays to avoid rate limits
+  // Pro plan allows faster sequential fetching
   const paramsList: Record<string, string>[] = [];
   for (let i = 0; i < 7; i++) {
     const d = new Date();
@@ -109,12 +110,13 @@ export async function fetchTodaysFixtures(): Promise<ApiFixture[]> {
     });
   }
 
-  return apiFetchSequential<ApiFixture>("fixtures", paramsList, 1200);
+  return apiFetchSequential<ApiFixture>("fixtures", paramsList, 300);
 }
 
 export async function fetchOddsByDate(): Promise<ApiOddsResponse[]> {
   // Fetch odds for all 7 days to match the fixture window
-  // Uses sequential fetching with delays to respect rate limits (10 req/min on free tier)
+  // Don't restrict to a single bookmaker — get ALL available bookmakers
+  // Then we'll pick the best one per fixture
   const paramsList: Record<string, string>[] = [];
   for (let i = 0; i < 7; i++) {
     const d = new Date();
@@ -122,19 +124,18 @@ export async function fetchOddsByDate(): Promise<ApiOddsResponse[]> {
     paramsList.push({
       date: d.toISOString().split("T")[0],
       timezone: "Europe/Istanbul",
-      bookmaker: "8",
     });
   }
 
-  // Stagger odds requests after fixture requests finish
-  // Use 1.5s delay between each to stay well within 10 req/min limit
-  return apiFetchSequential<ApiOddsResponse>("odds", paramsList, 1500);
+  console.log("[Odds] Fetching odds for 7 days...");
+  const results = await apiFetchSequential<ApiOddsResponse>("odds", paramsList, 300);
+  console.log(`[Odds] Got ${results.length} fixture odds results`);
+  return results;
 }
 
 export async function fetchOddsByFixture(fixtureId: number): Promise<ApiOddsResponse[]> {
   return apiFetch<ApiOddsResponse>("odds", {
     fixture: String(fixtureId),
-    bookmaker: "8",
   });
 }
 
