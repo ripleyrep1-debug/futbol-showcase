@@ -56,12 +56,80 @@ const TURKISH_TEAMS = [
   "eyupspor", "eyüpspor", "goztepe", "göztepe", "bodrumspor",
 ];
 
-function buildMatches(fixtures: ApiFixture[], oddsMap: Map<number, ApiOddsResponse>): ParsedMatch[] {
+// Generate default 1X2 odds for matches without API odds
+function generateDefaultOdds(): ApiOddsBet[] {
+  return [
+    {
+      id: 1,
+      name: "Match Winner",
+      values: [
+        { value: "Home", odd: "2.10" },
+        { value: "Draw", odd: "3.25" },
+        { value: "Away", odd: "3.40" },
+      ],
+    },
+  ];
+}
+
+// Apply odds_overrides from Supabase on top of API/default odds
+function applyOverrides(
+  bets: ApiOddsBet[],
+  fixtureId: number,
+  overrides: any[]
+): ApiOddsBet[] {
+  const fixtureOverrides = overrides.filter((o) => o.fixture_id === fixtureId && o.is_active);
+  if (fixtureOverrides.length === 0) return bets;
+
+  // Clone bets and apply overrides
+  const updatedBets = bets.map((bet) => ({
+    ...bet,
+    values: bet.values.map((v) => {
+      const override = fixtureOverrides.find(
+        (o) => o.bet_type === bet.name && o.bet_value === v.value
+      );
+      return override ? { ...v, odd: String(override.custom_odd) } : v;
+    }),
+  }));
+
+  // Add any overrides for bet types not in API data
+  const existingKeys = new Set(
+    bets.flatMap((b) => b.values.map((v) => `${b.name}::${v.value}`))
+  );
+  const newOverrides = fixtureOverrides.filter(
+    (o) => !existingKeys.has(`${o.bet_type}::${o.bet_value}`)
+  );
+
+  // Group new overrides by bet_type
+  const newBetMap = new Map<string, ApiOddsBet>();
+  newOverrides.forEach((o) => {
+    if (!newBetMap.has(o.bet_type)) {
+      newBetMap.set(o.bet_type, { id: 999, name: o.bet_type, values: [] });
+    }
+    newBetMap.get(o.bet_type)!.values.push({ value: o.bet_value || "", odd: String(o.custom_odd) });
+  });
+
+  return [...updatedBets, ...Array.from(newBetMap.values())];
+}
+
+function buildMatches(
+  fixtures: ApiFixture[],
+  oddsMap: Map<number, ApiOddsResponse>,
+  oddsOverrides: any[] = []
+): ParsedMatch[] {
   return fixtures
     .filter((f) => !FINISHED_STATUSES.includes(f.fixture.status.short) && !POSTPONED_STATUSES.includes(f.fixture.status.short))
     .map((f) => {
       const oddsData = oddsMap.get(f.fixture.id);
-      const allBets = oddsData?.bookmakers?.[0]?.bets || [];
+      let allBets = oddsData?.bookmakers?.[0]?.bets || [];
+      
+      // If no API odds, generate defaults
+      if (allBets.length === 0) {
+        allBets = generateDefaultOdds();
+      }
+      
+      // Apply admin overrides
+      allBets = applyOverrides(allBets, f.fixture.id, oddsOverrides);
+      
       const date = new Date(f.fixture.date);
       const isLive = ["1H", "2H", "HT", "ET", "P", "BT", "LIVE"].includes(f.fixture.status.short);
       
@@ -437,9 +505,22 @@ const BettingOdds = ({ onAddBet, selectedBets, selectedLeague }: BettingOddsProp
     return disabled;
   }, [siteSettings]);
 
+  // Fetch odds overrides from Supabase
+  const { data: oddsOverrides = [] } = useQuery({
+    queryKey: ["odds-overrides-active"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("odds_overrides")
+        .select("*")
+        .eq("is_active", true);
+      return data || [];
+    },
+    staleTime: 30000,
+  });
+
   // Use React Query for match data with proper cache invalidation
   const { data: allMatches = [], isLoading: loading, error: queryError, refetch: loadData } = useQuery({
-    queryKey: ["betting-matches"],
+    queryKey: ["betting-matches", oddsOverrides],
     queryFn: async () => {
       const [fixtures, oddsArr] = await Promise.all([
         fetchTodaysFixtures(),
@@ -447,14 +528,14 @@ const BettingOdds = ({ onAddBet, selectedBets, selectedLeague }: BettingOddsProp
       ]);
       const oddsMap = new Map<number, ApiOddsResponse>();
       oddsArr.forEach((o) => oddsMap.set(o.fixture.id, o));
-      return buildMatches(fixtures, oddsMap);
+      return buildMatches(fixtures, oddsMap, oddsOverrides);
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes - keep data fresh longer
-    gcTime: 30 * 60 * 1000, // keep in cache for 30 minutes
-    refetchInterval: 5 * 60 * 1000, // refresh every 5 minutes (avoid rate limits)
-    refetchOnWindowFocus: false, // prevent refetch on tab switch (rate limit)
+    staleTime: 5 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchInterval: 5 * 60 * 1000,
+    refetchOnWindowFocus: false,
     retry: 1,
-    placeholderData: (prev) => prev, // keep previous data during refetch
+    placeholderData: (prev) => prev,
   });
 
   const error = queryError ? (queryError as Error).message : null;
