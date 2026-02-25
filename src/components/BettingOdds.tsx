@@ -56,20 +56,7 @@ const TURKISH_TEAMS = [
   "eyupspor", "eyüpspor", "goztepe", "göztepe", "bodrumspor",
 ];
 
-// Generate default 1X2 odds for matches without API odds
-function generateDefaultOdds(): ApiOddsBet[] {
-  return [
-    {
-      id: 1,
-      name: "Match Winner",
-      values: [
-        { value: "Home", odd: "2.10" },
-        { value: "Draw", odd: "3.25" },
-        { value: "Away", odd: "3.40" },
-      ],
-    },
-  ];
-}
+// No fake default odds — only real API odds or admin overrides are shown
 
 // Apply odds_overrides from Supabase on top of API/default odds
 function applyOverrides(
@@ -121,11 +108,6 @@ function buildMatches(
     .map((f) => {
       const oddsData = oddsMap.get(f.fixture.id);
       let allBets = oddsData?.bookmakers?.[0]?.bets || [];
-      
-      // If no API odds, generate defaults
-      if (allBets.length === 0) {
-        allBets = generateDefaultOdds();
-      }
       
       // Apply admin overrides
       allBets = applyOverrides(allBets, f.fixture.id, oddsOverrides);
